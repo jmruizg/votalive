@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VotaLive — Resultados</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07070f;--surface:rgba(255,255,255,0.04);--surface2:rgba(255,255,255,0.07);
+    --border:rgba(255,255,255,0.08);--accent:#7c6ff7;--accent2:#f7c06f;--accent3:#6ff7c0;
+    --text:#f0eff8;--muted:rgba(240,239,248,0.45);--danger:#f76f6f;
+    --radius:20px;--radius-sm:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;overflow:hidden;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;
+    background-image:radial-gradient(ellipse 120% 80% at 50% -20%,rgba(124,111,247,0.15) 0%,transparent 60%);
+  }
+
+  /* SETUP OVERLAY */
+  #setup-overlay{position:fixed;inset:0;background:rgba(7,7,15,0.95);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:200;padding:1.5rem;}
+  .setup-box{background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius);padding:2.5rem;width:100%;max-width:420px;text-align:center;}
+  .setup-logo{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;margin-bottom:0.25rem;}
+  .setup-logo span{color:var(--accent);}
+  .setup-sub{color:var(--muted);font-size:0.88rem;margin-bottom:1.5rem;}
+  .input{width:100%;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.95rem;outline:none;transition:border 0.15s;margin-bottom:0.75rem;}
+  .input:focus{border-color:var(--accent);}
+  .input::placeholder{color:var(--muted);}
+  .btn-connect{width:100%;padding:0.85rem;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:500;cursor:pointer;border:none;transition:background 0.15s;}
+  .btn-connect:hover{background:#6a5ef0;}
+  .error-msg{color:var(--danger);font-size:0.85rem;margin-top:0.5rem;}
+
+  /* HEADER */
+  .r-header{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:1.2rem 2rem;background:linear-gradient(to bottom,rgba(7,7,15,0.9) 0%,transparent 100%);}
+  .r-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;letter-spacing:-0.02em;}
+  .r-logo span{color:var(--accent);}
+  .r-badge{display:inline-flex;align-items:center;gap:6px;padding:0.3rem 0.85rem;border-radius:999px;font-size:0.8rem;font-weight:500;}
+  .badge-live{background:rgba(111,247,192,0.12);color:var(--accent3);border:1px solid rgba(111,247,192,0.25);}
+  .badge-closed{background:rgba(247,111,111,0.12);color:var(--danger);border:1px solid rgba(247,111,111,0.25);}
+  .badge-waiting{background:rgba(247,192,111,0.12);color:var(--accent2);border:1px solid rgba(247,192,111,0.25);}
+  .dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 1.5s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  .r-timer-num{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;}
+  .r-timer-num.urgent{color:var(--danger);}
+
+  /* TIMER BAR */
+  .r-timer-bar-wrap{position:fixed;top:0;left:0;right:0;height:5px;z-index:60;}
+  .r-timer-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent3));transition:width 1s linear;}
+  .r-timer-bar-fill.urgent{background:linear-gradient(90deg,var(--danger),#f7a06f);}
+
+  /* MAIN STAGE */
+  .r-stage{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5rem 3rem 3rem;}
+
+  /* QUESTION */
+  .r-question{font-family:'Syne',sans-serif;font-size:clamp(1.8rem,4vw,3rem);font-weight:800;text-align:center;line-height:1.2;margin-bottom:0.5rem;animation:fade-up 0.6s ease both;}
+  .r-qnum{font-size:0.9rem;color:var(--muted);text-align:center;margin-bottom:1.5rem;letter-spacing:0.08em;text-transform:uppercase;}
+  @keyframes fade-up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+  /* VOTE COUNT */
+  .r-vote-count{font-size:0.9rem;color:var(--muted);text-align:center;margin-bottom:2rem;}
+
+  /* MC BARS */
+  .r-bar-list{width:100%;max-width:800px;display:flex;flex-direction:column;gap:1rem;}
+  .r-bar-item{display:flex;flex-direction:column;gap:6px;animation:fade-up 0.5s ease both;}
+  .r-bar-item:nth-child(1){animation-delay:0.05s}
+  .r-bar-item:nth-child(2){animation-delay:0.1s}
+  .r-bar-item:nth-child(3){animation-delay:0.15s}
+  .r-bar-item:nth-child(4){animation-delay:0.2s}
+  .r-bar-label{display:flex;justify-content:space-between;font-size:clamp(0.95rem,2vw,1.1rem);font-weight:500;}
+  .r-bar-count{color:var(--muted);}
+  .r-bar-count.winner{color:var(--accent3);font-weight:700;}
+  .r-bar-track{height:16px;background:rgba(255,255,255,0.06);border-radius:999px;overflow:hidden;}
+  .r-bar-fill{height:100%;border-radius:999px;background:rgba(124,111,247,0.6);transition:width 0.8s cubic-bezier(0.34,1.2,0.64,1);}
+  .r-bar-fill.winner{background:linear-gradient(90deg,var(--accent),var(--accent3));box-shadow:0 0 20px rgba(111,247,192,0.3);}
+
+  /* WORD CLOUD */
+  .r-word-cloud{display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;align-items:center;max-width:900px;}
+  .r-word-chip{padding:0.5rem 1.2rem;border-radius:999px;font-weight:600;animation:pop-in 0.5s cubic-bezier(0.34,1.56,0.64,1) both;}
+  @keyframes pop-in{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+
+  /* STARS */
+  .r-stars-wrap{display:flex;gap:3rem;align-items:center;flex-wrap:wrap;justify-content:center;max-width:700px;}
+  .r-avg{text-align:center;}
+  .r-avg-num{font-family:'Syne',sans-serif;font-size:clamp(4rem,10vw,7rem);font-weight:800;color:var(--accent2);line-height:1;animation:scale-in 0.6s cubic-bezier(0.34,1.56,0.64,1) both;}
+  @keyframes scale-in{from{transform:scale(0.5);opacity:0}to{transform:scale(1);opacity:1}}
+  .r-avg-label{color:var(--muted);font-size:1rem;margin-top:0.25rem;}
+  .r-star-dist{display:flex;flex-direction:column;gap:0.6rem;min-width:280px;}
+  .r-star-row{display:flex;align-items:center;gap:10px;}
+  .r-star-icons{font-size:1rem;min-width:72px;color:var(--accent2);}
+  .r-sbar-track{flex:1;height:10px;background:rgba(255,255,255,0.06);border-radius:999px;overflow:hidden;}
+  .r-sbar-fill{height:100%;border-radius:999px;background:var(--accent2);transition:width 0.8s;}
+  .r-sbar-count{font-size:0.85rem;color:var(--muted);min-width:20px;}
+
+  /* WAITING */
+  .r-waiting{text-align:center;animation:fade-up 0.6s ease both;}
+  .r-waiting-icon{font-size:4rem;margin-bottom:1rem;animation:float 3s ease-in-out infinite;}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  .r-waiting-title{font-family:'Syne',sans-serif;font-size:2rem;font-weight:700;margin-bottom:0.5rem;}
+  .r-waiting-sub{color:var(--muted);}
+
+  /* FINAL REVEAL overlay */
+  #final-overlay{position:fixed;inset:0;background:rgba(7,7,15,0);pointer-events:none;z-index:10;transition:background 1s;}
+  #final-overlay.reveal{background:radial-gradient(ellipse 100% 100% at 50% 50%,rgba(124,111,247,0.25) 0%,rgba(7,7,15,0.6) 100%);}
+  .final-badge{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);font-family:'Syne',sans-serif;font-size:clamp(2rem,6vw,4.5rem);font-weight:800;color:#fff;text-align:center;z-index:15;pointer-events:none;opacity:0;transition:all 0.6s cubic-bezier(0.34,1.56,0.64,1);}
+  .final-badge.show{transform:translate(-50%,-50%) scale(1);opacity:1;}
+
+  /* CONFETTI */
+  .confetti-piece{position:fixed;width:10px;height:10px;top:-20px;pointer-events:none;z-index:20;border-radius:2px;animation:confetti-fall linear forwards;}
+  @keyframes confetti-fall{to{transform:translateY(110vh) rotate(720deg);opacity:0;}}
+
+  /* Q PROGRESS */
+  .r-q-progress{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:50;}
+  .r-q-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.15);transition:all 0.3s;}
+  .r-q-dot.active{background:var(--accent);width:24px;border-radius:4px;}
+  .r-q-dot.done{background:rgba(124,111,247,0.4);}
+</style>
+</head>
+<body>
+
+<!-- TIMER BAR -->
+<div class="r-timer-bar-wrap"><div id="r-timer-bar" class="r-timer-bar-fill" style="width:0%"></div></div>
+
+<!-- HEADER -->
+<div class="r-header">
+  <div class="r-logo">vota<span>live</span> <small style="font-size:0.65rem;opacity:0.5;font-family:'DM Sans',sans-serif;font-weight:400">resultados</small></div>
+  <div style="display:flex;align-items:center;gap:1rem">
+    <span id="r-timer-num" class="r-timer-num" style="display:none"></span>
+    <span id="r-badge" class="r-badge badge-waiting">⏸ En espera</span>
+  </div>
+</div>
+
+<!-- MAIN STAGE -->
+<div class="r-stage" id="r-stage">
+  <div class="r-waiting">
+    <div class="r-waiting-icon">🎤</div>
+    <div class="r-waiting-title">Esperando al presentador</div>
+    <div class="r-waiting-sub">Los resultados aparecerán aquí en tiempo real</div>
+  </div>
+</div>
+
+<!-- Q PROGRESS DOTS -->
+<div class="r-q-progress" id="r-q-progress"></div>
+
+<!-- FINAL OVERLAY -->
+<div id="final-overlay"></div>
+
+<!-- SETUP OVERLAY -->
+<div id="setup-overlay">
+  <div class="setup-box">
+    <div class="setup-logo">vota<span>live</span></div>
+    <p class="setup-sub">Introduce tu Secret Key de JSONBin para conectar</p>
+    <input class="input" id="r-api-key" placeholder="$2b$10$..." />
+    <input class="input" id="r-bin-id" placeholder="Bin ID (opcional si ya está guardado)" />
+    <button class="btn-connect" onclick="Results.connect()">Conectar y ver resultados</button>
+    <div id="r-error" class="error-msg" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+const JSONBIN_BASE='https://api.jsonbin.io/v3';
+const CONFIG_KEY='votalive_jsonbin_config';
+const WORD_COLORS=[
+  {bg:'rgba(124,111,247,0.25)',color:'#c4bffa'},{bg:'rgba(247,192,111,0.25)',color:'#f7c06f'},
+  {bg:'rgba(111,247,192,0.25)',color:'#6ff7c0'},{bg:'rgba(247,111,111,0.2)',color:'#f79f9f'},
+  {bg:'rgba(111,192,247,0.25)',color:'#6fc0f7'},
+];
+function wordColor(w){let h=0;for(let c of w)h=(h*31+c.charCodeAt(0))%WORD_COLORS.length;return WORD_COLORS[Math.abs(h)];}
+
+let cfg=null,state=null,pollTimer=null,localTimer=null,lastQIndex=-1,lastOpen=null,confettiFired=false;
+
+const Results={
+  connect(){
+    const key=document.getElementById('r-api-key').value.trim();
+    const binId=document.getElementById('r-bin-id').value.trim();
+    const err=document.getElementById('r-error');err.style.display='none';
+    if(!key){err.textContent='Introduce la Secret Key.';err.style.display='block';return;}
+
+    // Try localStorage first
+    const saved=localStorage.getItem(CONFIG_KEY);
+    let resolvedBin=binId;
+    if(!resolvedBin&&saved){const c=JSON.parse(saved);resolvedBin=c.binId||'';}
+    if(!resolvedBin){err.textContent='Introduce también el Bin ID (lo ves en jsonbin.io).';err.style.display='block';return;}
+
+    cfg={apiKey:key,binId:resolvedBin};
+    document.getElementById('setup-overlay').style.display='none';
+    Results.startPolling();
+  },
+
+  async readBin(){
+    const r=await fetch(`${JSONBIN_BASE}/b/${cfg.binId}/latest`,{headers:{'X-Master-Key':cfg.apiKey}});
+    if(!r.ok)throw new Error('Read failed');
+    const d=await r.json();return d.record;
+  },
+
+  startPolling(){
+    Results.poll();
+    pollTimer=setInterval(Results.poll,2500);
+    localTimer=setInterval(Results.tickTimer,500);
+  },
+
+  async poll(){
+    try{
+      const fresh=await Results.readBin();
+      if(!fresh||!fresh.questions)return;
+      const qChanged=fresh.currentQIndex!==lastQIndex;
+      const justClosed=lastOpen===true&&fresh.votingOpen===false;
+      state=fresh;
+      Results.renderProgress();
+      // Only rebuild full stage when question actually changes
+      Results.renderStage(qChanged);
+      Results.updateTimerUI();
+      if(justClosed&&!confettiFired){Results.fireConfetti();confettiFired=true;}
+      if(fresh.votingOpen){confettiFired=false;}
+      lastQIndex=state.currentQIndex;lastOpen=state.votingOpen;
+    }catch(e){}
+  },
+
+  tickTimer(){
+    if(!state)return;
+    Results.updateTimerUI();
+  },
+
+  updateTimerUI(){
+    if(!state)return;
+    const open=state.votingOpen;const end=state.timerEnd;const dur=state.timerDuration||30;
+    const now=Date.now();
+    const rem=end?Math.max(0,Math.ceil((end-now)/1000)):0;
+    const pct=end?(Math.max(0,(end-now))/(dur*1000))*100:0;
+    const urgent=rem<=10&&rem>0&&open;
+
+    const badge=document.getElementById('r-badge');
+    const bar=document.getElementById('r-timer-bar');
+    const tn=document.getElementById('r-timer-num');
+
+    if(badge){
+      if(open){badge.className='r-badge badge-live';badge.innerHTML=`<span class="dot"></span> Votando`;}
+      else if(lastQIndex>=0){badge.className='r-badge badge-closed';badge.textContent='🔒 Cerrada';}
+      else{badge.className='r-badge badge-waiting';badge.textContent='⏸ En espera';}
+    }
+    if(bar){bar.style.width=(open?pct:0)+'%';bar.className='r-timer-bar-fill'+(urgent?' urgent':'');}
+    if(tn){
+      if(open&&end){tn.style.display='block';tn.textContent=rem+'s';tn.className='r-timer-num'+(urgent?' urgent':'');}
+      else{tn.style.display='none';}
+    }
+  },
+
+  renderProgress(){
+    if(!state)return;
+    const el=document.getElementById('r-q-progress');if(!el)return;
+    el.innerHTML=state.questions.map((q,i)=>`<div class="r-q-dot ${i===state.currentQIndex?'active':i<state.currentQIndex?'done':''}"></div>`).join('');
+  },
+
+  renderStage(forceRebuild){
+    if(!state)return;
+    const stage=document.getElementById('r-stage');if(!stage)return;
+    const q=state.questions[state.currentQIndex];if(!q)return;
+    const votes=q.votes||{};
+    const total=Object.keys(votes).length;
+    const open=state.votingOpen;
+    const isFinal=!open&&total>0;
+
+    // Final reveal overlay
+    const overlay=document.getElementById('final-overlay');
+    if(isFinal)overlay.classList.add('reveal');else overlay.classList.remove('reveal');
+
+    // Only rebuild if question ID, type, or options changed — never on mere data updates
+    const currentOpts=(q.options||[]).join('||');
+    const needsRebuild=forceRebuild
+      ||stage.dataset.qid!==q.id
+      ||stage.dataset.type!==q.type
+      ||stage.dataset.opts!==currentOpts;
+
+    if(needsRebuild){
+      stage.dataset.qid=q.id;
+      stage.dataset.type=q.type;
+      stage.dataset.opts=currentOpts;
+      Results._buildStage(stage,q,votes,total,isFinal);
+    } else {
+      Results._patchStage(stage,q,votes,total,isFinal);
+    }
+  },
+
+
+
+  _buildStage(stage,q,votes,total,isFinal){
+    let html=`<div class="r-qnum">Pregunta ${state.currentQIndex+1} de ${state.questions.length}</div>
+              <div class="r-question">${q.text}</div>
+              <div class="r-vote-count" data-live="count">${total} voto${total!==1?'s':''}</div>`;
+
+    if(q.type==='mc'){
+      const opts=q.options||[];
+      const counts={};opts.forEach(o=>counts[o]=0);
+      Object.values(votes).forEach(v=>{if(counts[v]!==undefined)counts[v]++;});
+      const max=Math.max(...Object.values(counts),1);
+      html+=`<div class="r-bar-list">${opts.map((o,idx)=>{
+        const pct=Math.round(counts[o]/max*100);
+        const isWinner=isFinal&&counts[o]===max&&counts[o]>0;
+        return`<div class="r-bar-item" style="animation-delay:${0.15+idx*0.07}s" data-opt="${o.replace(/"/g,'&quot;')}">
+          <div class="r-bar-label">
+            <span data-live="label-${idx}" ${isWinner?'style="color:#fff;font-weight:700"':''}>${isWinner?'🏆 ':''}${o}</span>
+            <span class="r-bar-count ${isWinner?'winner':''}" data-live="count-${idx}">${counts[o]} voto${counts[o]!==1?'s':''}</span>
+          </div>
+          <div class="r-bar-track"><div class="r-bar-fill ${isWinner?'winner':''}" data-live="bar-${idx}" style="width:${pct}%"></div></div>
+        </div>`;
+      }).join('')}</div>`;
+    } else if(q.type==='word'){
+      const counts={};
+      Object.values(votes).forEach(v=>{v=v.trim().toLowerCase();if(v)counts[v]=(counts[v]||0)+1;});
+      const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+      const max=sorted[0]?sorted[0][1]:1;
+      html+=`<div class="r-word-cloud" data-live="cloud">${sorted.map(([w,c],i)=>{
+        const size=(1+(c/max)*2.2).toFixed(2);const col=wordColor(w);
+        return`<span class="r-word-chip" data-word="${w}" style="font-size:${size}rem;background:${col.bg};color:${col.color};animation-delay:${i*0.06}s">${w}</span>`;
+      }).join('')}${!sorted.length?'<p style="color:var(--muted)">Esperando respuestas...</p>':''}</div>`;
+    } else if(q.type==='star'){
+      const vals=Object.values(votes).map(Number).filter(n=>n>=1&&n<=5);
+      const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
+      const dist=[1,2,3,4,5].map(s=>({s,c:vals.filter(v=>v===s).length}));
+      const maxD=Math.max(...dist.map(d=>d.c),1);
+      html+=`<div class="r-stars-wrap">
+        <div class="r-avg">
+          <div class="r-avg-num" data-live="avg">${avg?avg.toFixed(1):'–'}</div>
+          <div class="r-avg-label" data-live="avg-stars">${'★'.repeat(Math.round(avg))}</div>
+          <div class="r-avg-label" style="margin-top:4px" data-live="avg-count">${vals.length} respuesta${vals.length!==1?'s':''}</div>
+        </div>
+        <div class="r-star-dist">${dist.reverse().map(d=>`
+          <div class="r-star-row" data-star="${d.s}">
+            <span class="r-star-icons">${'★'.repeat(d.s)}<span style="opacity:0.25">${'★'.repeat(5-d.s)}</span></span>
+            <div class="r-sbar-track"><div class="r-sbar-fill" data-live="sbar-${d.s}" style="width:${Math.round(d.c/maxD*100)}%"></div></div>
+            <span class="r-sbar-count" data-live="scount-${d.s}">${d.c}</span>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    }
+    stage.innerHTML=html;
+  },
+
+  _patchStage(stage,q,votes,total,isFinal){
+    // Patch vote count
+    const countEl=stage.querySelector('[data-live="count"]');
+    if(countEl)countEl.textContent=`${total} voto${total!==1?'s':''}`;
+
+    if(q.type==='mc'){
+      const opts=q.options||[];
+      const counts={};opts.forEach(o=>counts[o]=0);
+      Object.values(votes).forEach(v=>{if(counts[v]!==undefined)counts[v]++;});
+      const max=Math.max(...Object.values(counts),1);
+      opts.forEach((o,idx)=>{
+        const pct=Math.round(counts[o]/max*100);
+        const isWinner=isFinal&&counts[o]===max&&counts[o]>0;
+        const bar=stage.querySelector(`[data-live="bar-${idx}"]`);
+        const cnt=stage.querySelector(`[data-live="count-${idx}"]`);
+        const lbl=stage.querySelector(`[data-live="label-${idx}"]`);
+        if(bar){bar.style.width=pct+'%';bar.className='r-bar-fill'+(isWinner?' winner':'');}
+        if(cnt){cnt.textContent=`${counts[o]} voto${counts[o]!==1?'s':''}`;cnt.className='r-bar-count'+(isWinner?' winner':'');}
+        if(lbl){lbl.textContent=(isWinner?'🏆 ':'')+o;lbl.style.cssText=isWinner?'color:#fff;font-weight:700':'';}
+      });
+    } else if(q.type==='word'){
+      const cloud=stage.querySelector('[data-live="cloud"]');if(!cloud)return;
+      const counts={};
+      Object.values(votes).forEach(v=>{v=v.trim().toLowerCase();if(v)counts[v]=(counts[v]||0)+1;});
+      const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+      const max=sorted[0]?sorted[0][1]:1;
+      // Update existing chips size, add new ones
+      const existing=new Set([...cloud.querySelectorAll('[data-word]')].map(e=>e.dataset.word));
+      sorted.forEach(([w,c],i)=>{
+        const size=(1+(c/max)*2.2).toFixed(2);
+        let chip=cloud.querySelector(`[data-word="${CSS.escape(w)}"]`);
+        if(chip){chip.style.fontSize=size+'rem';}
+        else{const col=wordColor(w);chip=document.createElement('span');chip.className='r-word-chip';chip.dataset.word=w;chip.style.cssText=`font-size:${size}rem;background:${col.bg};color:${col.color}`;chip.textContent=w;cloud.appendChild(chip);}
+        existing.delete(w);
+      });
+      // Remove chips no longer present
+      existing.forEach(w=>{const el=cloud.querySelector(`[data-word="${CSS.escape(w)}"]`);if(el)el.remove();});
+      if(!sorted.length&&!cloud.querySelector('p')){cloud.innerHTML='<p style="color:var(--muted)">Esperando respuestas...</p>';}
+      else if(sorted.length){const p=cloud.querySelector('p');if(p)p.remove();}
+    } else if(q.type==='star'){
+      const vals=Object.values(votes).map(Number).filter(n=>n>=1&&n<=5);
+      const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
+      const dist=[1,2,3,4,5].map(s=>({s,c:vals.filter(v=>v===s).length}));
+      const maxD=Math.max(...dist.map(d=>d.c),1);
+      const avgEl=stage.querySelector('[data-live="avg"]');if(avgEl)avgEl.textContent=avg?avg.toFixed(1):'–';
+      const avgStars=stage.querySelector('[data-live="avg-stars"]');if(avgStars)avgStars.textContent='★'.repeat(Math.round(avg));
+      const avgCount=stage.querySelector('[data-live="avg-count"]');if(avgCount)avgCount.textContent=`${vals.length} respuesta${vals.length!==1?'s':''}`;
+      dist.forEach(d=>{
+        const bar=stage.querySelector(`[data-live="sbar-${d.s}"]`);if(bar)bar.style.width=Math.round(d.c/maxD*100)+'%';
+        const cnt=stage.querySelector(`[data-live="scount-${d.s}"]`);if(cnt)cnt.textContent=d.c;
+      });
+    }
+  },
+
+  fireConfetti(){
+    const colors=['#7c6ff7','#f7c06f','#6ff7c0','#f76f6f','#6fc0f7','#fff'];
+    for(let i=0;i<120;i++){
+      setTimeout(()=>{
+        const el=document.createElement('div');el.className='confetti-piece';
+        const col=colors[Math.floor(Math.random()*colors.length)];
+        el.style.cssText=`left:${Math.random()*100}vw;background:${col};width:${6+Math.random()*10}px;height:${6+Math.random()*10}px;border-radius:${Math.random()>0.5?'50%':'2px'};animation-duration:${2+Math.random()*2}s;animation-delay:${Math.random()*0.5}s;`;
+        document.body.appendChild(el);setTimeout(()=>el.remove(),4000);
+      },i*15);
+    }
+  }
+};
+
+// Auto-connect from localStorage
+window.addEventListener('load',()=>{
+  const saved=localStorage.getItem(CONFIG_KEY);
+  if(saved){
+    const c=JSON.parse(saved);
+    if(c.apiKey&&c.binId){
+      document.getElementById('r-api-key').value=c.apiKey;
+      document.getElementById('r-bin-id').value=c.binId;
+    }
+  }
+});
+</script>
+</body>
+</html>

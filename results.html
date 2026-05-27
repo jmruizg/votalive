@@ -124,6 +124,7 @@
 <!-- HEADER -->
 <div class="r-header">
   <div class="r-logo">vota<span>live</span> <small style="font-size:0.65rem;opacity:0.5;font-family:'DM Sans',sans-serif;font-weight:400">resultados</small></div>
+  <div id="r-event-title" style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;color:var(--text);display:none"></div>
   <div style="display:flex;align-items:center;gap:1rem">
     <span id="r-timer-num" class="r-timer-num" style="display:none"></span>
     <span id="r-badge" class="r-badge badge-waiting">⏸ En espera</span>
@@ -138,6 +139,9 @@
     <div class="r-waiting-sub">Los resultados aparecerán aquí en tiempo real</div>
   </div>
 </div>
+
+<!-- FOOTER -->
+<div id="r-footer" style="position:fixed;bottom:0;left:0;right:0;padding:0.6rem 2rem;background:linear-gradient(to top,rgba(7,7,15,0.9) 0%,transparent 100%);text-align:center;font-size:0.8rem;color:rgba(240,239,248,0.3);display:none;z-index:50"></div>
 
 <!-- Q PROGRESS DOTS -->
 <div class="r-q-progress" id="r-q-progress"></div>
@@ -209,6 +213,7 @@ const Results={
       const isSortable=fresh.questions[fresh.currentQIndex]?.type==='mc'||fresh.questions[fresh.currentQIndex]?.type==='multi';
       state=fresh;
       Results.renderProgress();
+      Results.renderBranding();
 
       if(qChanged){
         // Question changed — always full rebuild
@@ -255,6 +260,20 @@ const Results={
     if(tn){
       if(open&&end){tn.style.display='block';tn.textContent=rem+'s';tn.className='r-timer-num'+(urgent?' urgent':'');}
       else{tn.style.display='none';}
+    }
+  },
+
+  renderBranding(){
+    if(!state)return;
+    const title=document.getElementById('r-event-title');
+    if(title){
+      if(state.eventTitle){title.textContent=state.eventTitle;title.style.display='block';}
+      else title.style.display='none';
+    }
+    const footer=document.getElementById('r-footer');
+    if(footer){
+      if(state.eventFooter){footer.textContent=state.eventFooter;footer.style.display='block';}
+      else footer.style.display='none';
     }
   },
 

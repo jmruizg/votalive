@@ -61,6 +61,10 @@
   .q-list-item{display:flex;align-items:center;gap:10px;padding:0.6rem 0.75rem;border-radius:var(--radius-sm);cursor:pointer;transition:background 0.12s;font-size:0.88rem;margin-bottom:4px;}
   .q-list-item:hover{background:var(--surface2);}
   .q-list-item.active{background:rgba(124,111,247,0.15);border:1px solid rgba(124,111,247,0.3);}
+  .q-list-item.dragging{opacity:0.4;}
+  .q-list-item.drag-over{border-top:2px solid var(--accent);}
+  .drag-handle{cursor:grab;color:var(--muted);font-size:0.9rem;flex-shrink:0;padding:0 2px;}
+  .drag-handle:active{cursor:grabbing;}
   .q-num{width:22px;height:22px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:600;color:var(--muted);flex-shrink:0;}
   .q-list-item.active .q-num{background:var(--accent);color:#fff;}
   .q-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
@@ -132,6 +136,13 @@
   <div class="presenter-body">
     <div class="sidebar">
       <div class="sidebar-section">
+        <div class="sidebar-section-title">Evento</div>
+        <div style="display:flex;flex-direction:column;gap:0.5rem">
+          <div><div class="label">Título del evento</div><input class="input" id="event-title-input" placeholder="Nombre del evento..." oninput="App.updateEventTitle(this.value)"/></div>
+          <div><div class="label">Pie de página</div><input class="input" id="event-footer-input" placeholder="Pie de diapositiva..." oninput="App.updateEventFooter(this.value)"/></div>
+        </div>
+      </div>
+      <div class="sidebar-section">
         <div class="sidebar-section-title">Preguntas</div>
         <div id="q-list"></div>
         <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:0.75rem" onclick="App.addQuestion()">+ Nueva pregunta</button>
@@ -146,6 +157,7 @@
         <div>
           <div class="launch-panel-label">Tiempo de votación</div>
           <select class="select" id="timer-select" style="width:auto;margin-top:4px">
+            <option value="10">10 segundos</option>
             <option value="15">15 segundos</option>
             <option value="30" selected>30 segundos</option>
             <option value="45">45 segundos</option>
@@ -246,11 +258,39 @@ const App={
   renderQList(){
     const el=document.getElementById('q-list');if(!el)return;
     el.innerHTML=(state.questions||[]).map((q,i)=>`
-      <div class="q-list-item ${i===state.currentQIndex?'active':''}" onclick="App.setCurrentQ(${i})">
-        <div class="q-num">${i+1}</div><div class="q-title">${q.text||'Sin título'}</div>
+      <div class="q-list-item ${i===state.currentQIndex?'active':''}"
+        draggable="true"
+        ondragstart="App.dragStart(${i})"
+        ondragover="App.dragOver(event,${i})"
+        ondragleave="App.dragLeave(event)"
+        ondrop="App.dragDrop(event,${i})"
+        ondragend="App.dragEnd()"
+        onclick="App.setCurrentQ(${i})">
+        <span class="drag-handle">⠿</span>
+        <div class="q-num">${i+1}</div>
+        <div class="q-title">${q.text||'Sin título'}</div>
         <span class="q-type-chip chip-${q.type}">${{mc:'MC',multi:'Multi',word:'Palabras',star:'⭐',slide:'💬'}[q.type]||q.type}</span>
       </div>`).join('');
+    const ti=document.getElementById('event-title-input');if(ti&&document.activeElement!==ti)ti.value=state.eventTitle||'';
+    const fi=document.getElementById('event-footer-input');if(fi&&document.activeElement!==fi)fi.value=state.eventFooter||'';
   },
+
+  _dragIdx:null,
+  dragStart(i){App._dragIdx=i;setTimeout(()=>{const items=document.querySelectorAll('.q-list-item');if(items[i])items[i].classList.add('dragging');},0);},
+  dragOver(e,i){e.preventDefault();document.querySelectorAll('.q-list-item').forEach(el=>el.classList.remove('drag-over'));const items=document.querySelectorAll('.q-list-item');if(items[i])items[i].classList.add('drag-over');},
+  dragLeave(e){e.currentTarget.classList.remove('drag-over');},
+  dragDrop(e,i){
+    e.preventDefault();
+    document.querySelectorAll('.q-list-item').forEach(el=>el.classList.remove('drag-over','dragging'));
+    const from=App._dragIdx;if(from===null||from===i)return;
+    const qs=state.questions;const [moved]=qs.splice(from,1);qs.splice(i,0,moved);
+    state.currentQIndex=i;
+    App.writeBin(state);App.renderPresenter();
+  },
+  dragEnd(){document.querySelectorAll('.q-list-item').forEach(el=>el.classList.remove('dragging','drag-over'));App._dragIdx=null;},
+
+  updateEventTitle(val){state.eventTitle=val;App.writeBin(state);},
+  updateEventFooter(val){state.eventFooter=val;App.writeBin(state);},
 
   renderStage(){
     const el=document.getElementById('stage-content');if(!el)return;
@@ -320,7 +360,12 @@ const App={
   async nextQ(){state.votingOpen=false;state.timerEnd=null;if(state.currentQIndex<state.questions.length-1)state.currentQIndex++;await App.writeBin(state);App.renderPresenter();},
   updateQText(idx,val){state.questions[idx].text=val;App.writeBin(state);},
   updateSubtext(idx,val){state.questions[idx].slideSubtext=val;App.writeBin(state);},
-  updateQType(idx,val){state.questions[idx].type=val;if((val==='mc'||val==='multi')&&!(state.questions[idx].options||[]).length)state.questions[idx].options=['Opción A','Opción B','Opción C'];App.writeBin(state);App.renderEditor();App.renderStage();},
+  updateQType(idx,val){
+    state.questions[idx].type=val;
+    if((val==='mc'||val==='multi')&&!(state.questions[idx].options||[]).length)state.questions[idx].options=['Opción A','Opción B','Opción C'];
+    if(val==='slide'){const ts=document.getElementById('timer-select');if(ts)ts.value='10';}
+    App.writeBin(state);App.renderEditor();App.renderStage();
+  },
   updateOption(qi,oi,val){state.questions[qi].options[oi]=val;App.writeBin(state);},
   addOption(qi){state.questions[qi].options=[...(state.questions[qi].options||[]),'Nueva opción'];App.writeBin(state);App.renderEditor();},
   removeOption(qi,oi){state.questions[qi].options=state.questions[qi].options.filter((_,i)=>i!==oi);App.writeBin(state);App.renderEditor();},

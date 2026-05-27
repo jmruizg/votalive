@@ -130,9 +130,11 @@ function renderVoter(){
   if(!q){el.innerHTML='<p style="color:var(--muted);text-align:center;padding:2rem">Esperando la presentación...</p>';return;}
   const open=state.votingOpen,hasVoted=voterHasVoted[q.id];
   let html=`<div class="voter-question-num">Pregunta ${state.currentQIndex+1} de ${state.questions.length}</div>`;
-  html+=`<div id="v-closed-banner" class="closed-banner" style="display:${(!open&&!hasVoted)?'block':'none'}">🔒 La votación está cerrada</div>`;
+  html+=`<div id="v-closed-banner" class="closed-banner" style="display:${(!open&&!hasVoted&&q.type!=='slide')?'block':'none'}">🔒 La votación está cerrada</div>`;
   html+=`<div class="voter-question">${q.text}</div>`;
-  if(hasVoted){
+  if(q.type==='slide'){
+    html+=q.slideSubtext?`<p style="color:var(--muted);font-size:0.95rem;line-height:1.6;margin-top:-0.5rem">${q.slideSubtext}</p>`:'';
+  } else if(hasVoted){
     html+=`<div class="voted-msg"><div class="voted-icon">✅</div><div class="voted-title">¡Voto registrado!</div><div class="voted-sub">Espera la siguiente pregunta.</div></div>`;
   } else if(q.type==='mc'){
     html+=`<div id="v-form"><div class="vote-options">${(q.options||[]).map(o=>`<div class="vote-option" onclick="selectMC(this,'${o.replace(/'/g,"\\'")}','${q.id}')"><div class="opt-dot"></div>${o}</div>`).join('')}</div><div id="vote-btn-area" style="margin-top:1rem"></div></div>`;

@@ -258,7 +258,7 @@ const App={
     el.innerHTML=(state.questions||[]).map((q,i)=>`
       <div class="q-list-item ${i===state.currentQIndex?'active':''}" onclick="App.setCurrentQ(${i})">
         <div class="q-num">${i+1}</div><div class="q-title">${q.text||'Sin título'}</div>
-        <span class="q-type-chip chip-${q.type}">${{mc:'MC',multi:'Multi',word:'Palabras',star:'⭐'}[q.type]||q.type}</span>
+        <span class="q-type-chip chip-${q.type}">${{mc:'MC',multi:'Multi',word:'Palabras',star:'⭐',slide:'💬'}[q.type]||q.type}</span>
       </div>`).join('');
   },
 
@@ -273,6 +273,12 @@ const App={
 
   renderResults(q,isFinal){
     const votes=q.votes||{};
+    if(q.type==='slide'){
+      return`<div style="text-align:center;padding:1rem;color:var(--muted);font-size:0.9rem">
+        💬 Pantalla de transición — se muestra el mensaje en la vista de resultados
+        ${q.slideSubtext?`<br><small style="opacity:0.6">${q.slideSubtext}</small>`:''}
+      </div>`;
+    }
     if(q.type==='mc'||q.type==='multi'){
       const opts=q.options||[],counts={};opts.forEach(o=>counts[o]=0);
       if(q.type==='mc'){Object.values(votes).forEach(v=>{if(counts[v]!==undefined)counts[v]++;});}
@@ -306,20 +312,24 @@ const App={
     const optsHtml=hasOpts?`<div><div class="label">Opciones</div><div class="options-editor">
       ${(q.options||[]).map((o,i)=>`<div class="option-row"><input class="input" value="${o.replace(/"/g,'&quot;')}" oninput="App.updateOption(${state.currentQIndex},${i},this.value)"/><button class="btn btn-ghost btn-sm" onclick="App.removeOption(${state.currentQIndex},${i})">✕</button></div>`).join('')}
       <button class="btn btn-ghost btn-sm" onclick="App.addOption(${state.currentQIndex})">+ Añadir opción</button></div></div>`:'';
+    const subtextHtml=q.type==='slide'?`<div><div class="label">Subtexto (opcional)</div><input class="input" value="${(q.slideSubtext||'').replace(/"/g,'&quot;')}" placeholder="Texto secundario..." oninput="App.updateSubtext(${state.currentQIndex},this.value)"/></div>`:'';
     el.innerHTML=`
-      <div><div class="label">Pregunta</div><input class="input" value="${(q.text||'').replace(/"/g,'&quot;')}" oninput="App.updateQText(${state.currentQIndex},this.value)"/></div>
+      <div><div class="label">${q.type==='slide'?'Mensaje principal':'Pregunta'}</div><input class="input" value="${(q.text||'').replace(/"/g,'&quot;')}" oninput="App.updateQText(${state.currentQIndex},this.value)"/></div>
+      ${subtextHtml}
       <div><div class="label">Tipo</div><select class="select" onchange="App.updateQType(${state.currentQIndex},this.value)">
         <option value="mc" ${q.type==='mc'?'selected':''}>Opción múltiple (una)</option>
         <option value="multi" ${q.type==='multi'?'selected':''}>Selección múltiple (varias)</option>
         <option value="word" ${q.type==='word'?'selected':''}>Nube de palabras</option>
         <option value="star" ${q.type==='star'?'selected':''}>Valoración ⭐</option>
+        <option value="slide" ${q.type==='slide'?'selected':''}>💬 Pantalla de transición</option>
       </select></div>${optsHtml}
-      <button class="btn btn-danger btn-sm" onclick="App.deleteQ(${state.currentQIndex})">🗑 Eliminar pregunta</button>`;
+      <button class="btn btn-danger btn-sm" onclick="App.deleteQ(${state.currentQIndex})">🗑 Eliminar</button>`;
   },
 
   setCurrentQ(idx){state.currentQIndex=idx;App.writeBin(state);App.renderQList();App.renderStage();App.renderEditor();App.updateTimerUI();},
   async nextQ(){state.votingOpen=false;state.timerEnd=null;if(state.currentQIndex<state.questions.length-1)state.currentQIndex++;await App.writeBin(state);App.renderPresenter();},
   updateQText(idx,val){state.questions[idx].text=val;App.writeBin(state);},
+  updateSubtext(idx,val){state.questions[idx].slideSubtext=val;App.writeBin(state);},
   updateQType(idx,val){state.questions[idx].type=val;if((val==='mc'||val==='multi')&&!(state.questions[idx].options||[]).length)state.questions[idx].options=['Opción A','Opción B','Opción C'];App.writeBin(state);App.renderEditor();App.renderStage();},
   updateOption(qi,oi,val){state.questions[qi].options[oi]=val;App.writeBin(state);},
   addOption(qi){state.questions[qi].options=[...(state.questions[qi].options||[]),'Nueva opción'];App.writeBin(state);App.renderEditor();},

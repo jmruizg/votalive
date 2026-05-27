@@ -209,6 +209,7 @@ const Results={
       const isSortable=fresh.questions[fresh.currentQIndex]?.type==='mc'||fresh.questions[fresh.currentQIndex]?.type==='multi';
       state=fresh;
       Results.renderProgress();
+      // Full rebuild on question change or sort; patch otherwise (fixes frozen results when closed)
       Results.renderStage(qChanged||(justClosed&&isSortable));
       Results.updateTimerUI();
       if(justClosed&&!confettiFired){Results.fireConfetti();confettiFired=true;}
@@ -261,9 +262,9 @@ const Results={
     const open=state.votingOpen;
     const isFinal=!open&&total>0;
 
-    // Final reveal overlay
+    // Slides never show reveal overlay
     const overlay=document.getElementById('final-overlay');
-    if(isFinal)overlay.classList.add('reveal');else overlay.classList.remove('reveal');
+    if(isFinal&&q.type!=='slide')overlay.classList.add('reveal');else overlay.classList.remove('reveal');
 
     // Only rebuild if question ID, type, or options changed — never on mere data updates
     const currentOpts=(q.options||[]).join('||');
@@ -285,6 +286,15 @@ const Results={
 
 
   _buildStage(stage,q,votes,total,isFinal){
+    // Slide type: just show the message, centered, no voting UI
+    if(q.type==='slide'){
+      stage.innerHTML=`
+        <div style="text-align:center;padding:2rem;animation:fade-up 0.6s ease both">
+          <div class="r-question" style="font-size:clamp(2rem,5vw,3.5rem);margin-bottom:0">${q.text}</div>
+          ${q.slideSubtext?`<div style="color:var(--muted);font-size:clamp(1rem,2.5vw,1.4rem);margin-top:1.5rem;font-weight:400;line-height:1.5">${q.slideSubtext}</div>`:''}
+        </div>`;
+      return;
+    }
     let html=`<div class="r-qnum">Pregunta ${state.currentQIndex+1} de ${state.questions.length}</div>
               <div class="r-question">${q.text}</div>
               <div class="r-vote-count" data-live="count">${total} voto${total!==1?'s':''}</div>`;
@@ -344,6 +354,7 @@ const Results={
   },
 
   _patchStage(stage,q,votes,total,isFinal){
+    if(q.type==='slide')return; // slides are static, nothing to patch
     const countEl=stage.querySelector('[data-live="count"]');
     if(countEl)countEl.textContent=`${total} voto${total!==1?'s':''}`;
 

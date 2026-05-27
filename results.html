@@ -124,7 +124,7 @@
 <!-- HEADER -->
 <div class="r-header">
   <div class="r-logo">vota<span>live</span> <small style="font-size:0.65rem;opacity:0.5;font-family:'DM Sans',sans-serif;font-weight:400">resultados</small></div>
-  <div id="r-event-title" style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;color:var(--text);display:none"></div>
+  <div id="r-event-title" style="font-family:'Syne',sans-serif;font-weight:700;font-size:2.2rem;color:var(--text);display:none;letter-spacing:-0.02em"></div>
   <div style="display:flex;align-items:center;gap:1rem">
     <span id="r-timer-num" class="r-timer-num" style="display:none"></span>
     <span id="r-badge" class="r-badge badge-waiting">⏸ En espera</span>
@@ -141,7 +141,7 @@
 </div>
 
 <!-- FOOTER -->
-<div id="r-footer" style="position:fixed;bottom:0;left:0;right:0;padding:0.6rem 2rem;background:linear-gradient(to top,rgba(7,7,15,0.9) 0%,transparent 100%);text-align:center;font-size:0.8rem;color:rgba(240,239,248,0.3);display:none;z-index:50"></div>
+<div id="r-footer" style="position:fixed;bottom:0;left:0;right:0;padding:0.75rem 2rem;background:linear-gradient(to top,rgba(7,7,15,0.9) 0%,transparent 100%);text-align:center;font-size:1.6rem;color:rgba(240,239,248,0.35);display:none;z-index:50;font-family:'DM Sans',sans-serif"></div>
 
 <!-- Q PROGRESS DOTS -->
 <div class="r-q-progress" id="r-q-progress"></div>
@@ -220,9 +220,11 @@ const Results={
         confettiFired=false;
         Results.renderStage(true);
       } else if(justClosed){
-        // Just closed this instant — rebuild to sort and trigger confetti
+        // Just closed this instant — rebuild to sort and trigger confetti (not for slides)
         Results.renderStage(isSortable);
-        if(!confettiFired){Results.fireConfetti();confettiFired=true;}
+        const isSlide=fresh.questions[fresh.currentQIndex]?.type==='slide';
+        if(!confettiFired&&!isSlide){Results.fireConfetti();confettiFired=true;}
+        if(isSlide)confettiFired=true; // mark as fired so it doesn't trigger later
       } else if(fresh.votingOpen){
         // Voting open — patch live data
         Results.renderStage(false);

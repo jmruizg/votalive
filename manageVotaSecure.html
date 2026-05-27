@@ -142,8 +142,9 @@
       <div class="sidebar-section">
         <div class="sidebar-section-title">Evento</div>
         <div style="display:flex;flex-direction:column;gap:0.5rem">
-          <div><div class="label">Título del evento</div><input class="input" id="event-title-input" placeholder="Nombre del evento..." oninput="App.updateEventTitle(this.value)"/></div>
-          <div><div class="label">Pie de página</div><input class="input" id="event-footer-input" placeholder="Pie de diapositiva..." oninput="App.updateEventFooter(this.value)"/></div>
+          <div><div class="label">Título del evento</div><input class="input" id="event-title-input" placeholder="Nombre del evento..." /></div>
+          <div><div class="label">Pie de página</div><input class="input" id="event-footer-input" placeholder="Pie de diapositiva..." /></div>
+          <button class="btn btn-success btn-sm" style="width:100%;margin-top:0.25rem" onclick="App.saveBranding()">💾 Guardar título y pie</button>
         </div>
       </div>
       <div class="sidebar-section">
@@ -154,6 +155,7 @@
       <div class="sidebar-section">
         <div class="sidebar-section-title">Editar pregunta</div>
         <div class="q-editor" id="q-editor"></div>
+        <button class="btn btn-success btn-sm" style="width:100%;margin-top:0.75rem" onclick="App.saveCurrentQ()">💾 Guardar pregunta</button>
       </div>
     </div>
     <div class="main-stage">
@@ -299,8 +301,16 @@ const App={
   },
   dragEnd(){document.querySelectorAll('.q-list-item').forEach(el=>el.classList.remove('dragging','drag-over'));App._dragIdx=null;},
 
-  updateEventTitle(val){state.eventTitle=val;App.writeBin(state);},
-  updateEventFooter(val){state.eventFooter=val;App.writeBin(state);},
+  updateEventTitle(val){state.eventTitle=val;},
+  updateEventFooter(val){state.eventFooter=val;},
+  async saveBranding(){
+    state.eventTitle=document.getElementById('event-title-input')?.value.trim()||'';
+    state.eventFooter=document.getElementById('event-footer-input')?.value.trim()||'';
+    await App.writeBin(state);App.showToast('💾 Título y pie guardados');
+  },
+  async saveCurrentQ(){
+    await App.writeBin(state);App.showToast('💾 Pregunta guardada');
+  },
 
     renderStage(){
     const el=document.getElementById('stage-content');if(!el)return;
@@ -368,15 +378,15 @@ const App={
 
   setCurrentQ(idx){state.currentQIndex=idx;App.writeBin(state);App.renderQList();App.renderStage();App.renderEditor();App.updateTimerUI();},
   async nextQ(){state.votingOpen=false;state.timerEnd=null;if(state.currentQIndex<state.questions.length-1)state.currentQIndex++;await App.writeBin(state);App.renderPresenter();},
-  updateQText(idx,val){state.questions[idx].text=val;App.writeBin(state);},
-  updateSubtext(idx,val){state.questions[idx].slideSubtext=val;App.writeBin(state);},
+  updateQText(idx,val){state.questions[idx].text=val;},
+  updateSubtext(idx,val){state.questions[idx].slideSubtext=val;},
   updateQType(idx,val){
     state.questions[idx].type=val;
     if((val==='mc'||val==='multi')&&!(state.questions[idx].options||[]).length)state.questions[idx].options=['Opción A','Opción B','Opción C'];
     if(val==='slide'){const ts=document.getElementById('timer-select');if(ts)ts.value='10';}
     App.writeBin(state);App.renderEditor();App.renderStage();
   },
-  updateOption(qi,oi,val){state.questions[qi].options[oi]=val;App.writeBin(state);},
+  updateOption(qi,oi,val){state.questions[qi].options[oi]=val;},
   addOption(qi){state.questions[qi].options=[...(state.questions[qi].options||[]),'Nueva opción'];App.writeBin(state);App.renderEditor();},
   removeOption(qi,oi){state.questions[qi].options=state.questions[qi].options.filter((_,i)=>i!==oi);App.writeBin(state);App.renderEditor();},
   addQuestion(){const id='q_'+Date.now();state.questions.push({id,type:'mc',text:'Nueva pregunta',options:['Opción A','Opción B'],votes:{}});App.writeBin(state);App.setCurrentQ(state.questions.length-1);},

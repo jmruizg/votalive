@@ -381,6 +381,36 @@ const Results={
           </div>`).join('')}
         </div>
       </div>`;
+    } else if(q.type==='slider'){
+      const smin=q.sliderMin??0,smax=q.sliderMax??100;
+      const vals=Object.values(votes).map(Number).filter(v=>!isNaN(v));
+      const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+      const step=(smax-smin)/10;
+      const buckets=Array.from({length:10},(_,i)=>({
+        label:`${Math.round(smin+i*step)}`,
+        count:0,i
+      }));
+      vals.forEach(v=>{const bi=Math.min(9,Math.floor((v-smin)/(smax-smin)*10));if(bi>=0)buckets[bi].count++;});
+      const maxB=Math.max(...buckets.map(b=>b.count),1);
+      html+=`<div style="max-width:800px;width:100%">
+        <div style="display:flex;align-items:baseline;gap:1.5rem;margin-bottom:2rem">
+          <div style="text-align:center">
+            <div class="r-avg-num" data-live="slider-avg">${avg!==null?avg.toFixed(1):'–'}</div>
+            <div class="r-avg-label" data-live="slider-count">${vals.length} respuesta${vals.length!==1?'s':''}</div>
+          </div>
+          <div style="color:var(--muted);font-size:0.9rem">rango ${smin} – ${smax}</div>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:6px;height:180px">
+          ${buckets.map(b=>{
+            const h=Math.round(b.count/maxB*100);
+            return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+              <span style="font-size:0.7rem;color:var(--muted)" data-live="sbucket-c-${b.i}">${b.count||''}</span>
+              <div data-live="sbucket-${b.i}" style="width:100%;background:var(--accent);border-radius:4px 4px 0 0;height:${h}%;transition:height 0.5s;min-height:${b.count?4:0}px"></div>
+              <span style="font-size:0.65rem;color:var(--muted)">${b.label}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
     }
     stage.innerHTML=html;
   },
@@ -392,7 +422,24 @@ const Results={
     const countEl=stage.querySelector('[data-live="count"]');
     if(countEl)countEl.textContent=`${total} voto${total!==1?'s':''}`;
 
-    if(q.type==='mc'||q.type==='multi'){
+    if(q.type==='slider'){
+      const smin=q.sliderMin??0,smax=q.sliderMax??100;
+      const vals=Object.values(votes).map(Number).filter(v=>!isNaN(v));
+      const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+      const step=(smax-smin)/10;
+      const buckets=Array.from({length:10},(_,i)=>({count:0,i}));
+      vals.forEach(v=>{const bi=Math.min(9,Math.floor((v-smin)/(smax-smin)*10));if(bi>=0)buckets[bi].count++;});
+      const maxB=Math.max(...buckets.map(b=>b.count),1);
+      const avgEl=stage.querySelector('[data-live="slider-avg"]');if(avgEl)avgEl.textContent=avg!==null?avg.toFixed(1):'–';
+      const cntEl=stage.querySelector('[data-live="slider-count"]');if(cntEl)cntEl.textContent=`${vals.length} respuesta${vals.length!==1?'s':''}`;
+      buckets.forEach(b=>{
+        const bar=stage.querySelector(`[data-live="sbucket-${b.i}"]`);
+        const lbl=stage.querySelector(`[data-live="sbucket-c-${b.i}"]`);
+        if(bar){const h=Math.round(b.count/maxB*100)+'%';if(bar.style.height!==h)bar.style.height=h;if(b.count)bar.style.minHeight='4px';}
+        if(lbl){const t=b.count||'';if(lbl.textContent!==String(t))lbl.textContent=t;}
+      });
+      return;
+    }
       const opts=q.options||[];
       const counts={};opts.forEach(o=>counts[o]=0);
       if(q.type==='mc'){

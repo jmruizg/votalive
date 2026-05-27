@@ -39,6 +39,13 @@
   .star-btn{font-size:2.2rem;cursor:pointer;transition:transform 0.15s;filter:grayscale(1) opacity(0.4);}
   .star-btn:hover,.star-btn.lit{filter:grayscale(0) opacity(1);transform:scale(1.1);}
   .word-input-area{display:flex;gap:0.75rem;}
+  /* Slider */
+  .slider-wrap{padding:0.5rem 0 1.5rem;}
+  .slider-input{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:var(--surface2);outline:none;margin:1rem 0;}
+  .slider-input::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 0 4px rgba(124,111,247,0.2);}
+  .slider-input::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:var(--accent);cursor:pointer;border:none;}
+  .slider-labels{display:flex;justify-content:space-between;font-size:0.8rem;color:var(--muted);}
+  .slider-value{text-align:center;font-family:'Syne',sans-serif;font-size:2.5rem;font-weight:800;color:var(--accent);margin:0.5rem 0;}
   .input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.95rem;outline:none;transition:border 0.15s;}
   .input:focus{border-color:var(--accent);}
   .input::placeholder{color:var(--muted);}
@@ -144,6 +151,18 @@ function renderVoter(){
     html+=`<div id="v-form"><div class="word-input-area"><input class="input" id="word-input" placeholder="Escribe una palabra..." maxlength="30" onkeydown="if(event.key==='Enter')submitWord('${q.id}')"/><button class="btn btn-primary" onclick="submitWord('${q.id}')">Enviar</button></div></div>`;
   } else if(q.type==='star'){
     html+=`<div id="v-form"><div class="star-vote">${[1,2,3,4,5].map(s=>`<span class="star-btn" onclick="litStars(${s},'${q.id}')">★</span>`).join('')}</div><div id="star-btn-area"></div></div>`;
+  } else if(q.type==='slider'){
+    const min=q.sliderMin??0,max=q.sliderMax??100;
+    const mid=Math.round((min+max)/2);
+    html+=`<div id="v-form">
+      <div class="slider-wrap">
+        <div class="slider-value" id="slider-val-display">${mid}</div>
+        <input class="slider-input" type="range" id="slider-input" min="${min}" max="${max}" step="${(max-min)/10}" value="${mid}"
+          oninput="document.getElementById('slider-val-display').textContent=this.value"/>
+        <div class="slider-labels"><span>${min}</span><span>${max}</span></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="submitSlider('${q.id}')">Confirmar</button>
+    </div>`;
   }
   el.innerHTML=html;
 }
@@ -201,7 +220,13 @@ function litStars(n,qId){
   const a=document.getElementById('star-btn-area');
   if(a)a.innerHTML=`<button class="btn btn-primary" style="width:100%" onclick="submitStar('${qId}')">Confirmar valoración</button>`;
 }
-async function submitStar(qId){
+async function submitSlider(qId){
+  const el=document.getElementById('slider-input');if(!el)return;
+  const val=parseFloat(el.value);
+  const q=state.questions.find(q=>q.id===qId);if(!q)return;
+  q.votes[getVoterId()]=val;await writeBin(state);
+  voterHasVoted[qId]=true;showConfirm(document.getElementById('v-form'));
+}
   if(!_selStar)return;
   const q=state.questions.find(q=>q.id===qId);if(!q)return;
   q.votes[getVoterId()]=_selStar;await writeBin(state);

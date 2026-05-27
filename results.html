@@ -365,7 +365,9 @@ const Results={
   },
 
   _patchStage(stage,q,votes,total,isFinal){
-    if(q.type==='slide')return; // slides are static, nothing to patch
+    if(q.type==='slide')return;
+    // When closed, disable transitions so no animation fires even if values are touched
+    if(isFinal){stage.querySelectorAll('.r-bar-fill,.r-sbar-fill').forEach(el=>el.style.transition='none');}
     const countEl=stage.querySelector('[data-live="count"]');
     if(countEl)countEl.textContent=`${total} voto${total!==1?'s':''}`;
 
@@ -399,9 +401,9 @@ const Results={
         const bar=item.querySelector('[data-live^="bar-"]');
         const cnt=item.querySelector('[data-live^="count-"]');
         const lbl=item.querySelector('[data-live^="label-"]');
-        if(bar){bar.style.width=pct+'%';bar.className='r-bar-fill'+(isWinner?' winner':'');}
-        if(cnt){cnt.textContent=`${counts[o]} voto${counts[o]!==1?'s':''}`;cnt.className='r-bar-count'+(isWinner?' winner':'');}
-        if(lbl){lbl.textContent=(isWinner?'🏆 ':'')+o;lbl.style.cssText=isWinner?'color:#fff;font-weight:700':'';}
+        if(bar){const newW=pct+'%';if(bar.style.width!==newW)bar.style.width=newW;bar.className='r-bar-fill'+(isWinner?' winner':'');}
+        if(cnt){const newT=`${counts[o]} voto${counts[o]!==1?'s':''}`;if(cnt.textContent!==newT)cnt.textContent=newT;cnt.className='r-bar-count'+(isWinner?' winner':'');}
+        if(lbl){const newT=(isWinner?'🏆 ':'')+o;if(lbl.textContent!==newT)lbl.textContent=newT;lbl.style.cssText=isWinner?'color:#fff;font-weight:700':'';}
       });
     } else if(q.type==='word'){
       const cloud=stage.querySelector('[data-live="cloud"]');if(!cloud)return;
@@ -429,8 +431,9 @@ const Results={
       const avgStars=stage.querySelector('[data-live="avg-stars"]');if(avgStars)avgStars.textContent='★'.repeat(Math.round(avg));
       const avgCount=stage.querySelector('[data-live="avg-count"]');if(avgCount)avgCount.textContent=`${vals.length} respuesta${vals.length!==1?'s':''}`;
       dist.forEach(d=>{
-        const bar=stage.querySelector(`[data-live="sbar-${d.s}"]`);if(bar)bar.style.width=Math.round(d.c/maxD*100)+'%';
-        const cnt=stage.querySelector(`[data-live="scount-${d.s}"]`);if(cnt)cnt.textContent=d.c;
+        const newW=Math.round(d.c/maxD*100)+'%';
+        const bar=stage.querySelector(`[data-live="sbar-${d.s}"]`);if(bar&&bar.style.width!==newW)bar.style.width=newW;
+        const cnt=stage.querySelector(`[data-live="scount-${d.s}"]`);if(cnt&&cnt.textContent!==String(d.c))cnt.textContent=d.c;
       });
     }
   },

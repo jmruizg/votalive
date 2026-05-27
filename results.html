@@ -209,11 +209,22 @@ const Results={
       const isSortable=fresh.questions[fresh.currentQIndex]?.type==='mc'||fresh.questions[fresh.currentQIndex]?.type==='multi';
       state=fresh;
       Results.renderProgress();
-      // Full rebuild on question change or sort; patch otherwise (fixes frozen results when closed)
-      Results.renderStage(qChanged||(justClosed&&isSortable));
+
+      if(qChanged){
+        // Question changed — always full rebuild
+        confettiFired=false;
+        Results.renderStage(true);
+      } else if(justClosed){
+        // Just closed this instant — rebuild to sort and trigger confetti
+        Results.renderStage(isSortable);
+        if(!confettiFired){Results.fireConfetti();confettiFired=true;}
+      } else if(fresh.votingOpen){
+        // Voting open — patch live data
+        Results.renderStage(false);
+      }
+      // Voting closed and not just-closed: do nothing, screen is frozen on purpose
+
       Results.updateTimerUI();
-      if(justClosed&&!confettiFired){Results.fireConfetti();confettiFired=true;}
-      if(fresh.votingOpen){confettiFired=false;}
       lastQIndex=state.currentQIndex;lastOpen=state.votingOpen;
     }catch(e){}
   },

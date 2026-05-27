@@ -206,10 +206,10 @@ const Results={
       if(!fresh||!fresh.questions)return;
       const qChanged=fresh.currentQIndex!==lastQIndex;
       const justClosed=lastOpen===true&&fresh.votingOpen===false;
+      const isSortable=fresh.questions[fresh.currentQIndex]?.type==='mc'||fresh.questions[fresh.currentQIndex]?.type==='multi';
       state=fresh;
       Results.renderProgress();
-      // Only rebuild full stage when question actually changes
-      Results.renderStage(qChanged);
+      Results.renderStage(qChanged||(justClosed&&isSortable));
       Results.updateTimerUI();
       if(justClosed&&!confettiFired){Results.fireConfetti();confettiFired=true;}
       if(fresh.votingOpen){confettiFired=false;}
@@ -289,12 +289,18 @@ const Results={
               <div class="r-question">${q.text}</div>
               <div class="r-vote-count" data-live="count">${total} voto${total!==1?'s':''}</div>`;
 
-    if(q.type==='mc'){
+    if(q.type==='mc'||q.type==='multi'){
       const opts=q.options||[];
       const counts={};opts.forEach(o=>counts[o]=0);
-      Object.values(votes).forEach(v=>{if(counts[v]!==undefined)counts[v]++;});
+      if(q.type==='mc'){
+        Object.values(votes).forEach(v=>{if(counts[v]!==undefined)counts[v]++;});
+      } else {
+        Object.values(votes).forEach(arr=>{(Array.isArray(arr)?arr:[arr]).forEach(v=>{if(counts[v]!==undefined)counts[v]++;});});
+      }
       const max=Math.max(...Object.values(counts),1);
-      html+=`<div class="r-bar-list">${opts.map((o,idx)=>{
+      // When final: sort by votes desc; during voting: keep original order
+      const displayOpts=isFinal?[...opts].sort((a,b)=>counts[b]-counts[a]):opts;
+      html+=`<div class="r-bar-list">${displayOpts.map((o,idx)=>{
         const pct=Math.round(counts[o]/max*100);
         const isWinner=isFinal&&counts[o]===max&&counts[o]>0;
         return`<div class="r-bar-item" style="animation-delay:${0.15+idx*0.07}s" data-opt="${o.replace(/"/g,'&quot;')}">
@@ -338,21 +344,39 @@ const Results={
   },
 
   _patchStage(stage,q,votes,total,isFinal){
-    // Patch vote count
     const countEl=stage.querySelector('[data-live="count"]');
     if(countEl)countEl.textContent=`${total} voto${total!==1?'s':''}`;
 
-    if(q.type==='mc'){
+    if(q.type==='mc'||q.type==='multi'){
       const opts=q.options||[];
       const counts={};opts.forEach(o=>counts[o]=0);
-      Object.values(votes).forEach(v=>{if(counts[v]!==undefined)counts[v]++;});
+      if(q.type==='mc'){
+        Object.values(votes).forEach(v=>{if(counts[v]!==undefined)counts[v]++;});
+      } else {
+        Object.values(votes).forEach(arr=>{(Array.isArray(arr)?arr:[arr]).forEach(v=>{if(counts[v]!==undefined)counts[v]++;});});
+      }
       const max=Math.max(...Object.values(counts),1);
+      const maxVal=Math.max(...Object.values(counts));
+
+      // When final: reorder DOM elements by vote count
+      if(isFinal){
+        const list=stage.querySelector('.r-bar-list');
+        if(list){
+          const items=[...list.querySelectorAll('.r-bar-item')];
+          items.sort((a,b)=>counts[b.dataset.opt]-counts[a.dataset.opt]);
+          items.forEach(el=>list.appendChild(el));
+        }
+      }
+
       opts.forEach((o,idx)=>{
+        // Find item by data-opt since order may have changed
+        const item=stage.querySelector(`.r-bar-item[data-opt="${o.replace(/"/g,'&quot;')}"]`);
+        if(!item)return;
         const pct=Math.round(counts[o]/max*100);
-        const isWinner=isFinal&&counts[o]===max&&counts[o]>0;
-        const bar=stage.querySelector(`[data-live="bar-${idx}"]`);
-        const cnt=stage.querySelector(`[data-live="count-${idx}"]`);
-        const lbl=stage.querySelector(`[data-live="label-${idx}"]`);
+        const isWinner=isFinal&&counts[o]===maxVal&&counts[o]>0;
+        const bar=item.querySelector('[data-live^="bar-"]');
+        const cnt=item.querySelector('[data-live^="count-"]');
+        const lbl=item.querySelector('[data-live^="label-"]');
         if(bar){bar.style.width=pct+'%';bar.className='r-bar-fill'+(isWinner?' winner':'');}
         if(cnt){cnt.textContent=`${counts[o]} voto${counts[o]!==1?'s':''}`;cnt.className='r-bar-count'+(isWinner?' winner':'');}
         if(lbl){lbl.textContent=(isWinner?'🏆 ':'')+o;lbl.style.cssText=isWinner?'color:#fff;font-weight:700':'';}
@@ -363,16 +387,14 @@ const Results={
       Object.values(votes).forEach(v=>{v=v.trim().toLowerCase();if(v)counts[v]=(counts[v]||0)+1;});
       const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
       const max=sorted[0]?sorted[0][1]:1;
-      // Update existing chips size, add new ones
       const existing=new Set([...cloud.querySelectorAll('[data-word]')].map(e=>e.dataset.word));
-      sorted.forEach(([w,c],i)=>{
+      sorted.forEach(([w,c])=>{
         const size=(1+(c/max)*2.2).toFixed(2);
         let chip=cloud.querySelector(`[data-word="${CSS.escape(w)}"]`);
         if(chip){chip.style.fontSize=size+'rem';}
         else{const col=wordColor(w);chip=document.createElement('span');chip.className='r-word-chip';chip.dataset.word=w;chip.style.cssText=`font-size:${size}rem;background:${col.bg};color:${col.color}`;chip.textContent=w;cloud.appendChild(chip);}
         existing.delete(w);
       });
-      // Remove chips no longer present
       existing.forEach(w=>{const el=cloud.querySelector(`[data-word="${CSS.escape(w)}"]`);if(el)el.remove();});
       if(!sorted.length&&!cloud.querySelector('p')){cloud.innerHTML='<p style="color:var(--muted)">Esperando respuestas...</p>';}
       else if(sorted.length){const p=cloud.querySelector('p');if(p)p.remove();}

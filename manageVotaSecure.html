@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VotaLive — Gestión Segura</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c28;--border:rgba(255,255,255,0.08);
+    --accent:#7c6ff7;--accent2:#f7c06f;--accent3:#6ff7c0;--text:#f0eff8;
+    --muted:rgba(240,239,248,0.45);--danger:#f76f6f;--radius:16px;--radius-sm:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
+  .screen{display:none;min-height:100vh;}
+  .screen.active{display:flex;flex-direction:column;}
+  #screen-landing{align-items:center;justify-content:center;padding:2rem;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(124,111,247,0.18) 0%,transparent 70%);}
+  .landing-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:2.5rem;width:100%;max-width:380px;text-align:center;}
+  .landing-logo{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem;}
+  .landing-logo span{color:var(--accent);}
+  .landing-sub{color:var(--muted);font-size:0.9rem;margin-bottom:2rem;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0.75rem 1.5rem;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:0.95rem;font-weight:500;cursor:pointer;border:none;transition:all 0.18s;}
+  .btn:active{transform:scale(0.97);}
+  .btn-primary{background:var(--accent);color:#fff;width:100%;margin-bottom:0.75rem;}
+  .btn-primary:hover{background:#6a5ef0;}
+  .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);width:100%;margin-bottom:0.75rem;}
+  .btn-secondary:hover{background:rgba(255,255,255,0.06);}
+  .btn-sm{padding:0.5rem 1rem;font-size:0.85rem;}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+  .btn-ghost:hover{color:var(--text);border-color:rgba(255,255,255,0.2);}
+  .btn-danger{background:rgba(247,111,111,0.15);color:var(--danger);border:1px solid rgba(247,111,111,0.3);}
+  .btn-danger:hover{background:rgba(247,111,111,0.25);}
+  .btn-success{background:rgba(111,247,192,0.15);color:var(--accent3);border:1px solid rgba(111,247,192,0.3);}
+  .btn-success:hover{background:rgba(111,247,192,0.25);}
+  .input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.95rem;outline:none;transition:border 0.15s;}
+  .input:focus{border-color:var(--accent);}
+  .input::placeholder{color:var(--muted);}
+  .label{font-size:0.8rem;color:var(--muted);margin-bottom:0.35rem;font-weight:500;}
+  .select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;padding:0.65rem 0.9rem;outline:none;cursor:pointer;width:100%;}
+  .select:focus{border-color:var(--accent);}
+  .header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;flex-wrap:wrap;gap:0.75rem;}
+  .header-logo{font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;}
+  .header-logo span{color:var(--accent);}
+  .badge{display:inline-flex;align-items:center;padding:0.25rem 0.65rem;border-radius:999px;font-size:0.75rem;font-weight:500;gap:5px;}
+  .badge-live{background:rgba(111,247,192,0.12);color:var(--accent3);border:1px solid rgba(111,247,192,0.25);}
+  .badge-closed{background:rgba(247,111,111,0.12);color:var(--danger);border:1px solid rgba(247,111,111,0.25);}
+  .badge-waiting{background:rgba(247,192,111,0.12);color:var(--accent2);border:1px solid rgba(247,192,111,0.25);}
+  .dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.5s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  .timer-bar-wrap{height:4px;background:var(--surface2);border-radius:0;flex-shrink:0;}
+  .timer-bar-fill{height:100%;background:var(--accent);transition:width 1s linear;border-radius:0;}
+  .timer-bar-fill.urgent{background:var(--danger);}
+  .timer-display{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;min-width:36px;text-align:center;}
+  .timer-display.urgent{color:var(--danger);}
+  #screen-presenter{background:var(--bg);}
+  .presenter-body{display:flex;flex:1;overflow:hidden;}
+  .sidebar{width:300px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;}
+  .sidebar-section{padding:1rem;border-bottom:1px solid var(--border);}
+  .sidebar-section-title{font-size:0.7rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem;}
+  .q-list-item{display:flex;align-items:center;gap:10px;padding:0.6rem 0.75rem;border-radius:var(--radius-sm);cursor:pointer;transition:background 0.12s;font-size:0.88rem;margin-bottom:4px;}
+  .q-list-item:hover{background:var(--surface2);}
+  .q-list-item.active{background:rgba(124,111,247,0.15);border:1px solid rgba(124,111,247,0.3);}
+  .q-num{width:22px;height:22px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:600;color:var(--muted);flex-shrink:0;}
+  .q-list-item.active .q-num{background:var(--accent);color:#fff;}
+  .q-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+  .q-type-chip{font-size:0.65rem;padding:2px 6px;border-radius:4px;flex-shrink:0;}
+  .chip-mc{background:rgba(124,111,247,0.2);color:var(--accent);}
+  .chip-multi{background:rgba(124,200,247,0.2);color:#6fc0f7;}
+  .chip-word{background:rgba(247,192,111,0.2);color:var(--accent2);}
+  .chip-star{background:rgba(111,247,192,0.2);color:var(--accent3);}
+  .main-stage{flex:1;padding:2rem;overflow-y:auto;display:flex;flex-direction:column;gap:1.5rem;}
+  .stage-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;}
+  .stage-card-question{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:700;line-height:1.3;margin-bottom:1.5rem;}
+  .launch-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+  .launch-panel-label{font-size:0.85rem;color:var(--muted);}
+  .launch-actions{display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;margin-left:auto;}
+  .bar-list{display:flex;flex-direction:column;gap:0.75rem;}
+  .bar-item{display:flex;flex-direction:column;gap:4px;}
+  .bar-label{display:flex;justify-content:space-between;font-size:0.9rem;}
+  .bar-track{height:10px;background:var(--surface2);border-radius:999px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:999px;background:var(--accent);transition:width 0.5s cubic-bezier(0.34,1.56,0.64,1);min-width:0;}
+  .bar-fill.winner{background:linear-gradient(90deg,var(--accent),var(--accent3));}
+  .word-cloud{display:flex;flex-wrap:wrap;gap:0.6rem;min-height:80px;align-items:center;}
+  .word-chip{padding:0.35rem 0.85rem;border-radius:999px;font-weight:500;}
+  .stars-display{display:flex;flex-direction:column;gap:0.5rem;}
+  .stars-row{display:flex;align-items:center;gap:12px;}
+  .stars-bar-track{flex:1;height:8px;background:var(--surface2);border-radius:999px;overflow:hidden;}
+  .stars-bar-fill{height:100%;border-radius:999px;background:var(--accent2);transition:width 0.5s;}
+  .avg-num{font-family:'Syne',sans-serif;font-size:3.5rem;font-weight:800;color:var(--accent2);}
+  .avg-label{color:var(--muted);font-size:0.85rem;}
+  .q-editor{display:flex;flex-direction:column;gap:1rem;}
+  .options-editor{display:flex;flex-direction:column;gap:0.5rem;}
+  .option-row{display:flex;gap:0.5rem;}
+  .option-row .input{flex:1;}
+  .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;margin:auto;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .error-msg{color:var(--danger);font-size:0.88rem;text-align:center;margin-top:0.75rem;}
+  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem 1.25rem;font-size:0.88rem;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.5);animation:toast-in 0.3s ease;z-index:999;white-space:nowrap;}
+  @keyframes toast-in{from{opacity:0;transform:translateX(-50%) translateY(8px)}}
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px;}
+  @media(max-width:640px){.presenter-body{flex-direction:column;}.sidebar{width:100%;max-height:220px;}.main-stage{padding:1rem;}}
+</style>
+</head>
+<body>
+
+<!-- LANDING - LOGIN -->
+<div id="screen-landing" class="screen active">
+  <div class="landing-box">
+    <div class="landing-logo">vota<span>live</span></div>
+    <p class="landing-sub">Acceso restringido al presentador</p>
+    <div style="text-align:left;margin-bottom:1rem">
+      <div class="label">Contraseña</div>
+      <input class="input" id="pwd-login" type="password" placeholder="Introduce la contraseña..." onkeydown="if(event.key==='Enter')App.checkPassword()"/>
+    </div>
+    <button class="btn btn-primary" onclick="App.checkPassword()">Entrar</button>
+    <div id="landing-error" class="error-msg" style="display:none"></div>
+    <div id="landing-loading" style="display:none;padding:1rem"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- PRESENTER -->
+<div id="screen-presenter" class="screen">
+  <div class="header">
+    <div class="header-logo">vota<span>live</span> <small style="font-size:0.7rem;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400">presentador</small></div>
+    <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap">
+      <span id="p-status-badge" class="badge badge-waiting">⏸ En espera</span>
+      <button class="btn btn-ghost btn-sm" onclick="App.copyVoteLink()">🗳️ Enlace votación</button>
+      <button class="btn btn-ghost btn-sm" onclick="App.copyResultsLink()">📊 Enlace resultados</button>
+      <button class="btn btn-ghost btn-sm" onclick="App.showPasswordModal()">🔐 Contraseña</button>
+      <button class="btn btn-ghost btn-sm" onclick="App.goHome()">Salir</button>
+    </div>
+  </div>
+  <div class="timer-bar-wrap"><div id="p-timer-bar" class="timer-bar-fill" style="width:100%"></div></div>
+  <div class="presenter-body">
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Preguntas</div>
+        <div id="q-list"></div>
+        <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:0.75rem" onclick="App.addQuestion()">+ Nueva pregunta</button>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Editar pregunta</div>
+        <div class="q-editor" id="q-editor"></div>
+      </div>
+    </div>
+    <div class="main-stage">
+      <div class="launch-panel">
+        <div>
+          <div class="launch-panel-label">Tiempo de votación</div>
+          <select class="select" id="timer-select" style="width:auto;margin-top:4px">
+            <option value="15">15 segundos</option>
+            <option value="30" selected>30 segundos</option>
+            <option value="45">45 segundos</option>
+            <option value="60">1 minuto</option>
+            <option value="90">1:30 min</option>
+            <option value="120">2 minutos</option>
+          </select>
+        </div>
+        <div class="launch-actions">
+          <span id="p-timer-display" class="timer-display" style="display:none"></span>
+          <button id="btn-launch" class="btn btn-success" onclick="App.launchVoting()">▶ Lanzar votación</button>
+          <button id="btn-close-early" class="btn btn-danger btn-sm" style="display:none" onclick="App.closeVotingEarly()">⏹ Cerrar ahora</button>
+          <button id="btn-next-q" class="btn btn-primary btn-sm" style="display:none" onclick="App.nextQ()">Siguiente pregunta →</button>
+        </div>
+      </div>
+      <div id="stage-content" class="stage-card">
+        <div class="spinner" style="margin:2rem auto"></div>
+      </div>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+        <span style="color:var(--muted);font-size:0.88rem;align-self:center" id="voter-count-label">0 votos</span>
+        <button class="btn btn-danger btn-sm" onclick="App.resetCurrentQ()">↺ Resetear esta</button>
+        <button class="btn btn-danger btn-sm" onclick="App.resetAllQ()">🗑 Resetear TODO</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const JSONBIN_BASE='https://api.jsonbin.io/v3';
+const HARDCODED_CONFIG={apiKey:'$2a$10$Ahrerr8sWWjfgEoeMhnqDOz0okM//gTvibkiczObCd6D43HwEaO3y',binId:'6a162f1b8ef04f45381f56a5'};
+const POLL_MS=2500;
+const DEFAULT_STATE={currentQIndex:0,votingOpen:false,timerEnd:null,timerDuration:30,questions:[
+  {id:'q1',type:'mc',text:'¿Cuánto conoces este tema?',options:['Nada','Un poco','Bastante','Soy experto/a'],votes:{}},
+  {id:'q2',type:'word',text:'¿Qué palabra describe este proyecto?',votes:{}},
+  {id:'q3',type:'star',text:'¿Cómo valoras la presentación?',votes:{}}
+]};
+
+const WORD_COLORS=[{bg:'rgba(124,111,247,0.18)',color:'#a99ffa'},{bg:'rgba(247,192,111,0.18)',color:'#f7c06f'},{bg:'rgba(111,247,192,0.18)',color:'#6ff7c0'},{bg:'rgba(247,111,111,0.15)',color:'#f79f9f'},{bg:'rgba(111,192,247,0.18)',color:'#6fc0f7'}];
+function wordColor(w){let h=0;for(let c of w)h=(h*31+c.charCodeAt(0))%WORD_COLORS.length;return WORD_COLORS[Math.abs(h)];}
+
+let cfg=HARDCODED_CONFIG,state=null,pollTimer=null,localTimer=null,isSaving=false,pendingSave=false;
+
+const App={
+  async readBin(){const r=await fetch(`${JSONBIN_BASE}/b/${cfg.binId}/latest`,{headers:{'X-Master-Key':cfg.apiKey}});if(!r.ok)throw new Error();return(await r.json()).record;},
+  async writeBin(s){
+    if(isSaving){pendingSave=true;return;}isSaving=true;
+    try{await fetch(`${JSONBIN_BASE}/b/${cfg.binId}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':cfg.apiKey},body:JSON.stringify(s)});state=s;}
+    finally{isSaving=false;if(pendingSave){pendingSave=false;App.writeBin(state);}}
+  },
+
+  showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-'+id).classList.add('active');},
+  showError(msg){const el=document.getElementById('landing-error');el.textContent=msg;el.style.display='block';document.getElementById('landing-loading').style.display='none';},
+  goHome(){clearInterval(pollTimer);clearInterval(localTimer);App.showScreen('landing');},
+
+  async enterPresenter(){App.checkPassword();},
+  async checkPassword(){
+    const pwd=document.getElementById('pwd-login')?.value.trim();
+    if(!pwd){App.showError('Introduce la contraseña.');return;}
+    document.getElementById('landing-loading').style.display='block';
+    document.getElementById('landing-error').style.display='none';
+    let s;
+    try{s=await App.readBin();}catch(e){App.showError('No se pudo conectar a JSONBin.');return;}
+    if(!s.accessPassword){App.showError('No hay contraseña definida. Accede primero desde manageVota.html para crearla.');document.getElementById('landing-loading').style.display='none';return;}
+    if(s.accessPassword!==pwd){App.showError('Contraseña incorrecta.');document.getElementById('landing-loading').style.display='none';return;}
+    state=s;if(!state.questions)state=JSON.parse(JSON.stringify(DEFAULT_STATE));
+    document.getElementById('landing-loading').style.display='none';
+    App.showScreen('presenter');App.renderPresenter();App.startLocalTimer();
+    pollTimer=setInterval(async()=>{try{const f=await App.readBin();if(f&&f.questions){const ci=state.currentQIndex;state=f;state.currentQIndex=ci;App.renderStage();App.renderQList();App.updateTimerUI();}}catch(e){}},POLL_MS);
+  },
+
+  startLocalTimer(){
+    clearInterval(localTimer);
+    localTimer=setInterval(()=>{App.updateTimerUI();if(state&&state.votingOpen&&state.timerEnd&&Math.ceil((state.timerEnd-Date.now())/1000)<=0)App.closeVoting();},500);
+  },
+
+  updateTimerUI(){
+    if(!state)return;
+    const open=state.votingOpen,end=state.timerEnd,dur=state.timerDuration||30;
+    const rem=end?Math.max(0,Math.ceil((end-Date.now())/1000)):0;
+    const pct=end?(Math.max(0,(end-Date.now()))/(dur*1000))*100:100;
+    const urgent=rem<=10&&rem>0;
+    const badge=document.getElementById('p-status-badge');
+    if(badge){badge.className='badge '+(open?'badge-live':'badge-waiting');badge.innerHTML=open?'<span class="dot"></span> Votando':'⏸ En espera';}
+    const bar=document.getElementById('p-timer-bar');
+    if(bar){bar.style.width=(open?pct:100)+'%';bar.className='timer-bar-fill'+(urgent?' urgent':'');}
+    const td=document.getElementById('p-timer-display');
+    if(td){if(open&&end){td.style.display='block';td.textContent=rem+'s';td.className='timer-display'+(urgent?' urgent':'');}else td.style.display='none';}
+    const bl=document.getElementById('btn-launch'),bc=document.getElementById('btn-close-early'),bn=document.getElementById('btn-next-q');
+    if(bl)bl.style.display=open?'none':'flex';
+    if(bc)bc.style.display=open?'flex':'none';
+    if(bn)bn.style.display=(!open&&Object.keys(state.questions[state.currentQIndex]?.votes||{}).length>0)?'flex':'none';
+  },
+
+  async launchVoting(){
+    const dur=parseInt(document.getElementById('timer-select').value);
+    state.votingOpen=true;state.timerEnd=Date.now()+(dur*1000);state.timerDuration=dur;
+    await App.writeBin(state);App.updateTimerUI();App.showToast('▶ Votación lanzada — '+dur+'s');
+  },
+  async closeVotingEarly(){await App.closeVoting();App.showToast('⏹ Votación cerrada');},
+  async closeVoting(){state.votingOpen=false;state.timerEnd=null;await App.writeBin(state);App.updateTimerUI();App.renderStage();},
+
+  renderPresenter(){App.renderQList();App.renderStage();App.renderEditor();App.updateTimerUI();},
+
+  renderQList(){
+    const el=document.getElementById('q-list');if(!el)return;
+    el.innerHTML=(state.questions||[]).map((q,i)=>`
+      <div class="q-list-item ${i===state.currentQIndex?'active':''}" onclick="App.setCurrentQ(${i})">
+        <div class="q-num">${i+1}</div><div class="q-title">${q.text||'Sin título'}</div>
+        <span class="q-type-chip chip-${q.type}">${{mc:'MC',multi:'Multi',word:'Palabras',star:'⭐'}[q.type]||q.type}</span>
+      </div>`).join('');
+  },
+
+  renderStage(){
+    const el=document.getElementById('stage-content');if(!el)return;
+    const q=state.questions[state.currentQIndex];
+    if(!q){el.innerHTML='<p style="color:var(--muted);text-align:center;padding:2rem">Sin pregunta</p>';return;}
+    const votes=q.votes||{},total=Object.keys(votes).length;
+    document.getElementById('voter-count-label').textContent=`${total} voto${total!==1?'s':''}`;
+    el.innerHTML=`<div class="stage-card-question">${q.text}</div>`+App.renderResults(q,false);
+  },
+
+  renderResults(q,isFinal){
+    const votes=q.votes||{};
+    if(q.type==='mc'||q.type==='multi'){
+      const opts=q.options||[],counts={};opts.forEach(o=>counts[o]=0);
+      if(q.type==='mc'){Object.values(votes).forEach(v=>{if(counts[v]!==undefined)counts[v]++;});}
+      else{Object.values(votes).forEach(arr=>{(Array.isArray(arr)?arr:[arr]).forEach(v=>{if(counts[v]!==undefined)counts[v]++;});});}
+      const max=Math.max(...Object.values(counts),1);
+      const sorted=isFinal?[...opts].sort((a,b)=>counts[b]-counts[a]):opts;
+      return`<div class="bar-list">${sorted.map(o=>`
+        <div class="bar-item">
+          <div class="bar-label"><span>${o}</span><span style="color:var(--muted)">${counts[o]}</span></div>
+          <div class="bar-track"><div class="bar-fill ${isFinal&&counts[o]===Math.max(...Object.values(counts))&&counts[o]>0?'winner':''}" style="width:${Math.round(counts[o]/max*100)}%"></div></div>
+        </div>`).join('')}</div>`;
+    } else if(q.type==='word'){
+      const counts={};Object.values(votes).forEach(v=>{v=v.trim().toLowerCase();if(v)counts[v]=(counts[v]||0)+1;});
+      const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);const max=sorted[0]?sorted[0][1]:1;
+      return`<div class="word-cloud">${sorted.map(([w,c])=>{const size=(0.8+(c/max)*1.3).toFixed(2);const col=wordColor(w);return`<span class="word-chip" style="font-size:${size}rem;background:${col.bg};color:${col.color}">${w}<small style="opacity:0.5;font-size:0.7em"> ×${c}</small></span>`;}).join('')}${!sorted.length?'<p style="color:var(--muted);font-size:0.9rem">Esperando respuestas...</p>':''}</div>`;
+    } else if(q.type==='star'){
+      const vals=Object.values(votes).map(Number).filter(n=>n>=1&&n<=5);
+      const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
+      const dist=[1,2,3,4,5].map(s=>({s,c:vals.filter(v=>v===s).length}));const maxD=Math.max(...dist.map(d=>d.c),1);
+      return`<div style="display:flex;gap:2rem;flex-wrap:wrap;align-items:flex-start">
+        <div style="text-align:center;padding:1rem"><div class="avg-num">${avg?avg.toFixed(1):'–'}</div><div class="avg-label">${vals.length} respuesta${vals.length!==1?'s':''}</div></div>
+        <div class="stars-display" style="flex:1">${dist.map(d=>`<div class="stars-row"><span style="font-size:0.9rem;min-width:64px">${'★'.repeat(d.s)}<span style="color:var(--muted)">${'★'.repeat(5-d.s)}</span></span><div class="stars-bar-track"><div class="stars-bar-fill" style="width:${Math.round(d.c/maxD*100)}%"></div></div><span style="font-size:0.8rem;color:var(--muted);min-width:16px">${d.c}</span></div>`).join('')}</div></div>`;
+    }
+    return '';
+  },
+
+  renderEditor(){
+    const el=document.getElementById('q-editor');if(!el)return;
+    const q=state.questions[state.currentQIndex];if(!q)return;
+    const hasOpts=q.type==='mc'||q.type==='multi';
+    const optsHtml=hasOpts?`<div><div class="label">Opciones</div><div class="options-editor">
+      ${(q.options||[]).map((o,i)=>`<div class="option-row"><input class="input" value="${o.replace(/"/g,'&quot;')}" oninput="App.updateOption(${state.currentQIndex},${i},this.value)"/><button class="btn btn-ghost btn-sm" onclick="App.removeOption(${state.currentQIndex},${i})">✕</button></div>`).join('')}
+      <button class="btn btn-ghost btn-sm" onclick="App.addOption(${state.currentQIndex})">+ Añadir opción</button></div></div>`:'';
+    el.innerHTML=`
+      <div><div class="label">Pregunta</div><input class="input" value="${(q.text||'').replace(/"/g,'&quot;')}" oninput="App.updateQText(${state.currentQIndex},this.value)"/></div>
+      <div><div class="label">Tipo</div><select class="select" onchange="App.updateQType(${state.currentQIndex},this.value)">
+        <option value="mc" ${q.type==='mc'?'selected':''}>Opción múltiple (una)</option>
+        <option value="multi" ${q.type==='multi'?'selected':''}>Selección múltiple (varias)</option>
+        <option value="word" ${q.type==='word'?'selected':''}>Nube de palabras</option>
+        <option value="star" ${q.type==='star'?'selected':''}>Valoración ⭐</option>
+      </select></div>${optsHtml}
+      <button class="btn btn-danger btn-sm" onclick="App.deleteQ(${state.currentQIndex})">🗑 Eliminar pregunta</button>`;
+  },
+
+  setCurrentQ(idx){state.currentQIndex=idx;App.writeBin(state);App.renderQList();App.renderStage();App.renderEditor();App.updateTimerUI();},
+  async nextQ(){state.votingOpen=false;state.timerEnd=null;if(state.currentQIndex<state.questions.length-1)state.currentQIndex++;await App.writeBin(state);App.renderPresenter();},
+  updateQText(idx,val){state.questions[idx].text=val;App.writeBin(state);},
+  updateQType(idx,val){state.questions[idx].type=val;if((val==='mc'||val==='multi')&&!(state.questions[idx].options||[]).length)state.questions[idx].options=['Opción A','Opción B','Opción C'];App.writeBin(state);App.renderEditor();App.renderStage();},
+  updateOption(qi,oi,val){state.questions[qi].options[oi]=val;App.writeBin(state);},
+  addOption(qi){state.questions[qi].options=[...(state.questions[qi].options||[]),'Nueva opción'];App.writeBin(state);App.renderEditor();},
+  removeOption(qi,oi){state.questions[qi].options=state.questions[qi].options.filter((_,i)=>i!==oi);App.writeBin(state);App.renderEditor();},
+  addQuestion(){const id='q_'+Date.now();state.questions.push({id,type:'mc',text:'Nueva pregunta',options:['Opción A','Opción B'],votes:{}});App.writeBin(state);App.setCurrentQ(state.questions.length-1);},
+  deleteQ(idx){if(state.questions.length<=1){App.showToast('⚠️ Necesitas al menos una pregunta');return;}state.questions.splice(idx,1);if(state.currentQIndex>=state.questions.length)state.currentQIndex=state.questions.length-1;App.writeBin(state);App.renderPresenter();},
+  resetCurrentQ(){if(!state.questions.length)return;if(confirm('¿Resetear los votos de esta pregunta?')){state.questions[state.currentQIndex].votes={};App.writeBin(state);App.renderStage();}},
+  resetAllQ(){if(!state.questions.length)return;if(confirm('⚠️ ¿Resetear TODOS los votos?')){state.questions.forEach(q=>q.votes={});state.votingOpen=false;state.timerEnd=null;App.writeBin(state);App.renderStage();App.showToast('✅ Todo reseteado');}},
+
+  copyVoteLink(){navigator.clipboard.writeText(location.href.replace('manageVotaSecure.html','vote.html')).then(()=>App.showToast('🔗 Enlace de votación copiado'));},
+  copyResultsLink(){navigator.clipboard.writeText(location.href.replace('manageVotaSecure.html','results.html')).then(()=>App.showToast('📊 Enlace de resultados copiado'));},
+
+  showPasswordModal(){
+    const current=state.accessPassword?'(ya hay una definida)':'(ninguna definida aún)';
+    const html=`<div style="position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:200;padding:1rem">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;width:100%;max-width:380px">
+        <div style="font-family:Syne,sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:0.25rem">🔐 Contraseña de acceso</div>
+        <div style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem">Contraseña actual: <strong style="color:var(--text)">${current}</strong><br>Se usará en manageVotaSecure.html</div>
+        <div class="label">Nueva contraseña</div>
+        <input class="input" id="pwd-input" type="password" placeholder="Escribe la nueva contraseña..." style="margin-bottom:0.75rem"/>
+        <div id="pwd-error" style="color:var(--danger);font-size:0.82rem;margin-bottom:0.5rem;display:none"></div>
+        <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:0.5rem">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('pwd-modal').remove()">Cancelar</button>
+          <button class="btn btn-primary btn-sm" onclick="App.savePassword()">Guardar contraseña</button>
+        </div>
+      </div>
+    </div>`;
+    const el=document.createElement('div');el.id='pwd-modal';el.innerHTML=html;document.body.appendChild(el);
+    setTimeout(()=>document.getElementById('pwd-input')?.focus(),100);
+  },
+  async savePassword(){
+    const val=document.getElementById('pwd-input')?.value.trim();
+    const err=document.getElementById('pwd-error');
+    if(!val){err.textContent='La contraseña no puede estar vacía.';err.style.display='block';return;}
+    state.accessPassword=val;
+    await App.writeBin(state);
+    document.getElementById('pwd-modal')?.remove();
+    App.showToast('🔐 Contraseña guardada');
+  },
+
+  showToast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}
+};
+
+window.addEventListener('load',()=>{document.getElementById('pwd-login')?.focus();});
+</script>
+</body>
+</html>

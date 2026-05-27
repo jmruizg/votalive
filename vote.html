@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VotaLive — Votar</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c28;--border:rgba(255,255,255,0.08);--accent:#7c6ff7;--accent2:#f7c06f;--accent3:#6ff7c0;--text:#f0eff8;--muted:rgba(240,239,248,0.45);--danger:#f76f6f;--radius:16px;--radius-sm:10px;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;background-image:radial-gradient(ellipse 100% 60% at 50% -10%,rgba(124,111,247,0.12) 0%,transparent 60%);}
+  .header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+  .header-logo{font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;}
+  .header-logo span{color:var(--accent);}
+  .badge{display:inline-flex;align-items:center;padding:0.25rem 0.65rem;border-radius:999px;font-size:0.75rem;font-weight:500;gap:5px;}
+  .badge-live{background:rgba(111,247,192,0.12);color:var(--accent3);border:1px solid rgba(111,247,192,0.25);}
+  .badge-closed{background:rgba(247,111,111,0.12);color:var(--danger);border:1px solid rgba(247,111,111,0.25);}
+  .badge-waiting{background:rgba(247,192,111,0.12);color:var(--accent2);border:1px solid rgba(247,192,111,0.25);}
+  .dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.5s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  .timer-bar-wrap{height:4px;background:var(--surface2);flex-shrink:0;}
+  .timer-bar-fill{height:100%;background:var(--accent);transition:width 1s linear;}
+  .timer-bar-fill.urgent{background:var(--danger);}
+  .voter-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;}
+  .voter-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;width:100%;max-width:480px;}
+  .voter-question{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700;margin-bottom:1.5rem;line-height:1.3;}
+  .voter-question-num{font-size:0.75rem;font-weight:500;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.5rem;}
+  .vote-options{display:flex;flex-direction:column;gap:0.65rem;}
+  .vote-option{display:flex;align-items:center;gap:12px;padding:0.85rem 1rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;font-size:0.95rem;}
+  .vote-option:hover{border-color:var(--accent);background:rgba(124,111,247,0.08);}
+  .vote-option.selected{border-color:var(--accent);background:rgba(124,111,247,0.18);}
+  .vote-option.selected .opt-dot{background:var(--accent);box-shadow:0 0 0 3px rgba(124,111,247,0.3);}
+  .opt-dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;transition:all 0.15s;}
+  .vote-option.multi .opt-dot{border-radius:4px;}
+  .vote-option.multi.selected .opt-dot{background:var(--accent);border-color:var(--accent);}
+  .vote-option.multi.selected .opt-dot::after{content:'✓';display:flex;align-items:center;justify-content:center;color:#fff;font-size:0.65rem;font-weight:700;line-height:16px;}
+  .multi-hint{font-size:0.78rem;color:var(--muted);margin-bottom:0.75rem;}
+  .star-vote{display:flex;gap:10px;justify-content:center;margin:0.5rem 0 1.5rem;}
+  .star-btn{font-size:2.2rem;cursor:pointer;transition:transform 0.15s;filter:grayscale(1) opacity(0.4);}
+  .star-btn:hover,.star-btn.lit{filter:grayscale(0) opacity(1);transform:scale(1.1);}
+  .word-input-area{display:flex;gap:0.75rem;}
+  .input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.95rem;outline:none;transition:border 0.15s;}
+  .input:focus{border-color:var(--accent);}
+  .input::placeholder{color:var(--muted);}
+  .voted-msg{text-align:center;padding:1.5rem 0;}
+  .voted-icon{font-size:3rem;margin-bottom:0.75rem;}
+  .voted-title{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:0.4rem;}
+  .voted-sub{color:var(--muted);font-size:0.9rem;}
+  .closed-banner{background:rgba(247,111,111,0.1);border:1px solid rgba(247,111,111,0.25);border-radius:var(--radius-sm);padding:1rem;text-align:center;color:var(--danger);font-size:0.95rem;margin-bottom:1rem;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0.75rem 1.5rem;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:0.95rem;font-weight:500;cursor:pointer;border:none;transition:all 0.18s;}
+  .btn:active{transform:scale(0.97);}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{background:#6a5ef0;}
+  .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;margin:auto;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-logo">vota<span>live</span></div>
+  <span id="v-status-badge" class="badge badge-waiting">⏸ En espera</span>
+</div>
+<div class="timer-bar-wrap"><div id="v-timer-bar" class="timer-bar-fill" style="width:0%"></div></div>
+<div class="voter-body">
+  <div id="voter-card" class="voter-card">
+    <div class="spinner"></div>
+  </div>
+</div>
+<script>
+const JSONBIN_BASE='https://api.jsonbin.io/v3';
+const VOTER_ID_KEY='votalive_voter_id';
+const HARDCODED_CONFIG={apiKey:'$2a$10$Ahrerr8sWWjfgEoeMhnqDOz0okM//gTvibkiczObCd6D43HwEaO3y',binId:'6a162f1b8ef04f45381f56a5'};
+
+let state=null,pollTimer=null,localTimer=null,voterHasVoted={};
+
+function getVoterId(){let id=sessionStorage.getItem(VOTER_ID_KEY);if(!id){id='v_'+Math.random().toString(36).slice(2)+Date.now().toString(36);sessionStorage.setItem(VOTER_ID_KEY,id);}return id;}
+
+async function readBin(){
+  const r=await fetch(`${JSONBIN_BASE}/b/${HARDCODED_CONFIG.binId}/latest`,{headers:{'X-Master-Key':HARDCODED_CONFIG.apiKey}});
+  if(!r.ok)throw new Error('Read failed');
+  return (await r.json()).record;
+}
+async function writeBin(s){
+  await fetch(`${JSONBIN_BASE}/b/${HARDCODED_CONFIG.binId}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':HARDCODED_CONFIG.apiKey},body:JSON.stringify(s)});
+  state=s;
+}
+
+async function init(){
+  try{state=await readBin();renderVoter();updateTimerUI();}
+  catch(e){document.getElementById('voter-card').innerHTML='<p style="color:var(--muted);text-align:center;padding:2rem">Error de conexión. Recarga la página.</p>';return;}
+  pollTimer=setInterval(poll,2500);
+  localTimer=setInterval(updateTimerUI,500);
+}
+
+async function poll(){
+  try{
+    const f=await readBin();if(!f||!f.questions)return;
+    const prevId=state.questions[state.currentQIndex]?.id;
+    const prevOpen=state.votingOpen;
+    state=f;
+    const newId=state.questions[state.currentQIndex]?.id;
+    const qChanged=newId!==prevId;
+    const justClosed=prevOpen===true&&state.votingOpen===false;
+    if(qChanged){voterHasVoted[newId]=false;renderVoter();}
+    else if(justClosed){patchVoterClosed();}
+    updateTimerUI();
+  }catch(e){}
+}
+
+function updateTimerUI(){
+  if(!state)return;
+  const open=state.votingOpen,end=state.timerEnd,dur=state.timerDuration||30;
+  const rem=end?Math.max(0,Math.ceil((end-Date.now())/1000)):0;
+  const pct=end?(Math.max(0,(end-Date.now()))/(dur*1000))*100:0;
+  const urgent=rem<=10&&rem>0&&open;
+  const vb=document.getElementById('v-status-badge');
+  const vbar=document.getElementById('v-timer-bar');
+  if(open){
+    if(vb){vb.className='badge badge-live';vb.innerHTML=`<span class="dot"></span> Votando${end?' · '+rem+'s':''}`;}
+    if(vbar){vbar.style.width=pct+'%';vbar.className='timer-bar-fill'+(urgent?' urgent':'');}
+  } else {
+    if(vb){vb.className='badge badge-closed';vb.innerHTML='🔒 Cerrada';}
+    if(vbar){vbar.style.width='0%';}
+  }
+}
+
+function renderVoter(){
+  const el=document.getElementById('voter-card');if(!el)return;
+  const q=state.questions[state.currentQIndex];
+  if(!q){el.innerHTML='<p style="color:var(--muted);text-align:center;padding:2rem">Esperando la presentación...</p>';return;}
+  const open=state.votingOpen,hasVoted=voterHasVoted[q.id];
+  let html=`<div class="voter-question-num">Pregunta ${state.currentQIndex+1} de ${state.questions.length}</div>`;
+  html+=`<div id="v-closed-banner" class="closed-banner" style="display:${(!open&&!hasVoted)?'block':'none'}">🔒 La votación está cerrada</div>`;
+  html+=`<div class="voter-question">${q.text}</div>`;
+  if(hasVoted){
+    html+=`<div class="voted-msg"><div class="voted-icon">✅</div><div class="voted-title">¡Voto registrado!</div><div class="voted-sub">Espera la siguiente pregunta.</div></div>`;
+  } else if(q.type==='mc'){
+    html+=`<div id="v-form"><div class="vote-options">${(q.options||[]).map(o=>`<div class="vote-option" onclick="selectMC(this,'${o.replace(/'/g,"\\'")}','${q.id}')"><div class="opt-dot"></div>${o}</div>`).join('')}</div><div id="vote-btn-area" style="margin-top:1rem"></div></div>`;
+  } else if(q.type==='multi'){
+    html+=`<div id="v-form"><p class="multi-hint">Puedes seleccionar varias opciones</p><div class="vote-options">${(q.options||[]).map(o=>`<div class="vote-option multi" onclick="toggleMulti(this,'${o.replace(/'/g,"\\'")}')"><div class="opt-dot"></div>${o}</div>`).join('')}</div><div id="vote-btn-area" style="margin-top:1rem"></div></div>`;
+  } else if(q.type==='word'){
+    html+=`<div id="v-form"><div class="word-input-area"><input class="input" id="word-input" placeholder="Escribe una palabra..." maxlength="30" onkeydown="if(event.key==='Enter')submitWord('${q.id}')"/><button class="btn btn-primary" onclick="submitWord('${q.id}')">Enviar</button></div></div>`;
+  } else if(q.type==='star'){
+    html+=`<div id="v-form"><div class="star-vote">${[1,2,3,4,5].map(s=>`<span class="star-btn" onclick="litStars(${s},'${q.id}')">★</span>`).join('')}</div><div id="star-btn-area"></div></div>`;
+  }
+  el.innerHTML=html;
+}
+
+function patchVoterClosed(){
+  const banner=document.getElementById('v-closed-banner');
+  const form=document.getElementById('v-form');
+  const hasVoted=voterHasVoted[state.questions[state.currentQIndex]?.id];
+  if(!hasVoted){if(banner)banner.style.display='block';if(form)form.style.display='none';}
+}
+
+function showConfirm(form){
+  if(form)form.innerHTML=`<div class="voted-msg"><div class="voted-icon">✅</div><div class="voted-title">¡Voto registrado!</div><div class="voted-sub">Espera la siguiente pregunta.</div></div>`;
+}
+
+let _selMC=null,_selStar=0,_selMulti=new Set();
+
+function selectMC(el,opt,qId){
+  document.querySelectorAll('.vote-option').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');_selMC=opt;
+  const a=document.getElementById('vote-btn-area');
+  if(a)a.innerHTML=`<button class="btn btn-primary" style="width:100%" onclick="submitMC('${qId}')">Confirmar voto</button>`;
+}
+async function submitMC(qId){
+  if(!_selMC)return;
+  const q=state.questions.find(q=>q.id===qId);if(!q)return;
+  q.votes[getVoterId()]=_selMC;await writeBin(state);
+  voterHasVoted[qId]=true;_selMC=null;showConfirm(document.getElementById('v-form'));
+}
+function toggleMulti(el,opt){
+  el.classList.toggle('selected');
+  if(el.classList.contains('selected'))_selMulti.add(opt);else _selMulti.delete(opt);
+  const a=document.getElementById('vote-btn-area');
+  if(a){
+    const qId=state.questions[state.currentQIndex].id;
+    a.innerHTML=_selMulti.size>0?`<button class="btn btn-primary" style="width:100%" onclick="submitMulti('${qId}')">Confirmar (${_selMulti.size} seleccionada${_selMulti.size>1?'s':''})</button>`:'';
+  }
+}
+async function submitMulti(qId){
+  if(!_selMulti.size)return;
+  const q=state.questions.find(q=>q.id===qId);if(!q)return;
+  q.votes[getVoterId()]=[..._selMulti];await writeBin(state);
+  voterHasVoted[qId]=true;_selMulti=new Set();showConfirm(document.getElementById('v-form'));
+}
+async function submitWord(qId){
+  const el=document.getElementById('word-input');
+  const w=(el?el.value:'').trim();if(!w){el&&el.focus();return;}
+  const q=state.questions.find(q=>q.id===qId);if(!q)return;
+  q.votes[getVoterId()]=w;await writeBin(state);
+  voterHasVoted[qId]=true;showConfirm(document.getElementById('v-form'));
+}
+function litStars(n,qId){
+  _selStar=n;
+  document.querySelectorAll('.star-btn').forEach((s,i)=>s.classList.toggle('lit',i<n));
+  const a=document.getElementById('star-btn-area');
+  if(a)a.innerHTML=`<button class="btn btn-primary" style="width:100%" onclick="submitStar('${qId}')">Confirmar valoración</button>`;
+}
+async function submitStar(qId){
+  if(!_selStar)return;
+  const q=state.questions.find(q=>q.id===qId);if(!q)return;
+  q.votes[getVoterId()]=_selStar;await writeBin(state);
+  voterHasVoted[qId]=true;_selStar=0;showConfirm(document.getElementById('v-form'));
+}
+
+window.addEventListener('load',init);
+</script>
+</body>
+</html>

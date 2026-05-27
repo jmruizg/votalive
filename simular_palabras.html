@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Simulador de palabras</title>
+<style>
+  body { font-family: sans-serif; background: #0a0a0f; color: #f0eff8; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+  .box { background: #13131a; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 2rem; max-width: 480px; width: 100%; text-align: center; }
+  h2 { font-size: 1.3rem; margin-bottom: 0.5rem; }
+  p { color: rgba(240,239,248,0.5); font-size: 0.88rem; margin-bottom: 1.5rem; }
+  .btn { background: #7c6ff7; color: #fff; border: none; border-radius: 10px; padding: 0.85rem 2rem; font-size: 1rem; cursor: pointer; width: 100%; margin-bottom: 0.75rem; }
+  .btn:hover { background: #6a5ef0; }
+  .btn-danger { background: rgba(247,111,111,0.15); color: #f76f6f; border: 1px solid rgba(247,111,111,0.3); }
+  .btn-danger:hover { background: rgba(247,111,111,0.25); }
+  .log { margin-top: 1rem; font-size: 0.82rem; color: rgba(240,239,248,0.4); max-height: 160px; overflow-y: auto; text-align: left; background: rgba(255,255,255,0.03); border-radius: 8px; padding: 0.75rem; }
+  select { background: #1c1c28; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; color: #f0eff8; padding: 0.6rem 1rem; font-size: 0.9rem; width: 100%; margin-bottom: 0.75rem; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h2>🧪 Simulador de palabras</h2>
+  <p>Mete respuestas simuladas en la pregunta de nube de palabras activa para ver cómo queda con mucha participación.</p>
+
+  <select id="num-select">
+    <option value="10">10 respuestas</option>
+    <option value="20">20 respuestas</option>
+    <option value="40" selected>40 respuestas</option>
+    <option value="80">80 respuestas</option>
+  </select>
+
+  <button class="btn" onclick="simular()">▶ Simular respuestas</button>
+  <button class="btn btn-danger" onclick="limpiar()">🗑 Limpiar simulación</button>
+
+  <div class="log" id="log">Esperando...</div>
+</div>
+
+<script>
+const API_KEY = '$2a$10$Ahrerr8sWWjfgEoeMhnqDOz0okM//gTvibkiczObCd6D43HwEaO3y';
+const BIN_ID  = '6a162f1b8ef04f45381f56a5';
+const BASE    = 'https://api.jsonbin.io/v3';
+
+// Banco de palabras variadas en español
+const PALABRAS = [
+  'innovación','futuro','colaboración','tecnología','creatividad','impacto','cambio',
+  'sostenibilidad','crecimiento','comunidad','transformación','liderazgo','empatía',
+  'diversidad','inclusión','aprendizaje','datos','digitalización','agilidad','confianza',
+  'transparencia','propósito','visión','talento','cultura','estrategia','resultados',
+  'motivación','pasión','equipo','redes','conexión','eficiencia','mejora','calidad',
+  'compromiso','valor','conocimiento','experiencia','personas','proceso','diseño',
+  'producto','cliente','mercado','reto','solución','oportunidad','ecosistema','red'
+];
+
+function log(msg){ const el=document.getElementById('log'); el.innerHTML+=`<div>${msg}</div>`; el.scrollTop=el.scrollHeight; }
+
+async function readBin(){
+  const r = await fetch(`${BASE}/b/${BIN_ID}/latest`, { headers:{'X-Master-Key':API_KEY} });
+  const d = await r.json(); return d.record;
+}
+async function writeBin(state){
+  await fetch(`${BASE}/b/${BIN_ID}`, { method:'PUT', headers:{'Content-Type':'application/json','X-Master-Key':API_KEY}, body:JSON.stringify(state) });
+}
+
+async function simular(){
+  const n = parseInt(document.getElementById('num-select').value);
+  document.getElementById('log').innerHTML='';
+  log('Leyendo estado actual...');
+  try {
+    const state = await readBin();
+    const q = state.questions[state.currentQIndex];
+    if(!q){ log('❌ No hay pregunta activa'); return; }
+    if(q.type !== 'word'){ log(`⚠️ La pregunta activa es de tipo "${q.type}", no de palabras. Cambia a la pregunta de nube de palabras en el presentador.`); return; }
+    log(`✅ Pregunta: "${q.text}"`);
+
+    // Mezcla palabras con pesos distintos para que la nube sea realista
+    const pool = [...PALABRAS].sort(()=>Math.random()-0.5);
+    for(let i=0; i<n; i++){
+      const voterId = 'sim_'+i+'_'+Date.now();
+      // Las primeras palabras se repiten más (más peso visual)
+      const word = pool[Math.floor(Math.pow(Math.random(),1.8)*pool.length)];
+      q.votes[voterId] = word;
+    }
+    log(`📝 Añadiendo ${n} votos simulados...`);
+    await writeBin(state);
+    log(`✅ Listo. Mira la página de resultados.`);
+  } catch(e){ log('❌ Error: '+e.message); }
+}
+
+async function limpiar(){
+  document.getElementById('log').innerHTML='';
+  log('Limpiando votos simulados...');
+  try {
+    const state = await readBin();
+    const q = state.questions[state.currentQIndex];
+    if(!q){ log('❌ No hay pregunta activa'); return; }
+    // Elimina solo los votos de simulación (empiezan por "sim_")
+    Object.keys(q.votes).forEach(k=>{ if(k.startsWith('sim_')) delete q.votes[k]; });
+    await writeBin(state);
+    log('✅ Votos simulados eliminados.');
+  } catch(e){ log('❌ Error: '+e.message); }
+}
+</script>
+</body>
+</html>

@@ -170,9 +170,10 @@
         </div>
         <div class="launch-actions">
           <span id="p-timer-display" class="timer-display" style="display:none"></span>
+          <button id="btn-prev-q" class="btn btn-ghost btn-sm" style="display:none" onclick="App.prevQ()">← Anterior</button>
           <button id="btn-launch" class="btn btn-success" onclick="App.launchVoting()">▶ Lanzar votación</button>
           <button id="btn-close-early" class="btn btn-danger btn-sm" style="display:none" onclick="App.closeVotingEarly()">⏹ Cerrar ahora</button>
-          <button id="btn-next-q" class="btn btn-primary btn-sm" style="display:none" onclick="App.nextQ()">Siguiente pregunta →</button>
+          <button id="btn-next-q" class="btn btn-primary btn-sm" style="display:none" onclick="App.nextQ()">Siguiente →</button>
         </div>
       </div>
       <div id="stage-content" class="stage-card">
@@ -241,10 +242,16 @@ const App={
     if(bar){bar.style.width=(open?pct:100)+'%';bar.className='timer-bar-fill'+(urgent?' urgent':'');}
     const td=document.getElementById('p-timer-display');
     if(td){if(open&&end){td.style.display='block';td.textContent=rem+'s';td.className='timer-display'+(urgent?' urgent':'');}else td.style.display='none';}
-    const bl=document.getElementById('btn-launch'),bc=document.getElementById('btn-close-early'),bn=document.getElementById('btn-next-q');
+    const bl=document.getElementById('btn-launch'),bc=document.getElementById('btn-close-early'),bn=document.getElementById('btn-next-q'),bp=document.getElementById('btn-prev-q');
+    const q=state.questions[state.currentQIndex];
+    const isSlide=q?.type==='slide';
+    const hasVotes=Object.keys(q?.votes||{}).length>0;
     if(bl)bl.style.display=open?'none':'flex';
     if(bc)bc.style.display=open?'flex':'none';
-    if(bn)bn.style.display=(!open&&Object.keys(state.questions[state.currentQIndex]?.votes||{}).length>0)?'flex':'none';
+    // Show next when: voting closed AND (has votes OR is a slide) AND not last question
+    if(bn)bn.style.display=(!open&&(hasVotes||isSlide)&&state.currentQIndex<state.questions.length-1)?'flex':'none';
+    // Show prev when: voting closed AND not first question
+    if(bp)bp.style.display=(!open&&state.currentQIndex>0)?'flex':'none';
   },
 
   async launchVoting(){
@@ -368,6 +375,7 @@ const App={
 
   setCurrentQ(idx){state.currentQIndex=idx;App.writeBin(state);App.renderQList();App.renderStage();App.renderEditor();App.updateTimerUI();},
   async nextQ(){state.votingOpen=false;state.timerEnd=null;if(state.currentQIndex<state.questions.length-1)state.currentQIndex++;await App.writeBin(state);App.renderPresenter();},
+  async prevQ(){state.votingOpen=false;state.timerEnd=null;if(state.currentQIndex>0)state.currentQIndex--;await App.writeBin(state);App.renderPresenter();},
   updateQText(idx,val){state.questions[idx].text=val;},
   updateSubtext(idx,val){state.questions[idx].slideSubtext=val;},
   updateQType(idx,val){

@@ -204,14 +204,18 @@ const Ctrl={
     if(!state)return;
     const q=state.questions[state.currentQIndex];
     const total=Object.keys(q?.votes||{}).length;
-    // Question info
     document.getElementById('c-q-num').textContent=`Pregunta ${state.currentQIndex+1} de ${state.questions.length}`;
     document.getElementById('c-q-type').textContent=TYPE_LABELS[q?.type]||q?.type||'';
     document.getElementById('c-q-text').textContent=q?.text||'–';
     document.getElementById('c-vote-count').textContent=total?`${total} voto${total!==1?'s':''}` :'Sin votos aún';
-    // Progress
     document.getElementById('c-progress').innerHTML=state.questions.map((_,i)=>`<div class="pdot ${i===state.currentQIndex?'active':i<state.currentQIndex?'done':''}"></div>`).join('');
-    // Buttons
+    // Sync timer select with question duration
+    const ts=document.getElementById('c-timer-select');
+    if(ts&&q?.duration){
+      let found=false;
+      for(const opt of ts.options){if(parseInt(opt.value)===q.duration){ts.value=opt.value;found=true;break;}}
+      if(!found){const opt=document.createElement('option');opt.value=q.duration;opt.textContent=q.duration+'s';ts.appendChild(opt);ts.value=q.duration;}
+    }
     Ctrl.updateTimer();
   },
 

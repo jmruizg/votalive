@@ -264,13 +264,14 @@ const App={
 
   async launchVoting(){
     const dur=parseInt(document.getElementById('timer-select').value);
+    state.questions[state.currentQIndex].duration=dur;
     state.votingOpen=true;state.timerEnd=Date.now()+(dur*1000);state.timerDuration=dur;
     await App.writeBin(state);App.updateTimerUI();App.showToast('▶ Votación lanzada — '+dur+'s');
   },
   async closeVotingEarly(){await App.closeVoting();App.showToast('⏹ Votación cerrada');},
   async closeVoting(){state.votingOpen=false;state.timerEnd=null;await App.writeBin(state);App.updateTimerUI();App.renderStage();},
 
-  renderPresenter(){App.renderQList();App.renderStage();App.renderEditor();App.updateTimerUI();},
+  renderPresenter(){App.renderQList();App.renderStage();App.renderEditor();App.updateTimerUI();App.syncTimerSelect();},
 
   renderQList(){
     const el=document.getElementById('q-list');if(!el)return;
@@ -398,6 +399,8 @@ const App={
       <div><div class="label">${q.type==='slide'?'Mensaje principal':'Pregunta'}</div>
       <input class="input" id="q-text-input" value="${(q.text||'').replace(/"/g,'&quot;')}" onblur="App.saveQText(${idx},this.value)"/></div>
       ${subtextHtml}${sliderHtml}
+      <div><div class="label">Duración (segundos)</div>
+      <input class="input" type="number" min="5" max="300" value="${q.duration||30}" onblur="App.saveDuration(${idx},this.value)"/></div>
       <div><div class="label">Tipo</div><select class="select" onchange="App.updateQType(${idx},this.value)">
         <option value="mc" ${q.type==='mc'?'selected':''}>Opción múltiple (una)</option>
         <option value="multi" ${q.type==='multi'?'selected':''}>Selección múltiple (varias)</option>
@@ -409,9 +412,37 @@ const App={
       <button class="btn btn-danger btn-sm" onclick="App.deleteQ(${idx})">🗑 Eliminar</button>`;
   },
 
-  setCurrentQ(idx){state.currentQIndex=idx;App.writeBin(state);App.renderQList();App.renderStage();App.renderEditor();App.updateTimerUI();},
-  async nextQ(){state.votingOpen=false;state.timerEnd=null;if(state.currentQIndex<state.questions.length-1)state.currentQIndex++;await App.writeBin(state);App.renderPresenter();},
-  async prevQ(){state.votingOpen=false;state.timerEnd=null;if(state.currentQIndex>0)state.currentQIndex--;await App.writeBin(state);App.renderPresenter();},
+  async saveDuration(idx,val){
+    const dur=Math.max(5,parseInt(val)||30);
+    state.questions[idx].duration=dur;
+    await App.writeBin(state);
+    App.showToast('💾 Guardado');
+    // Update the timer selector to reflect new value
+    App.syncTimerSelect();
+  },
+  syncTimerSelect(){
+    const q=state.questions[state.currentQIndex];
+    const ts=document.getElementById('timer-select');
+    if(!ts||!q)return;
+    const dur=q.duration||30;
+    // Find closest option or set custom
+    let found=false;
+    for(const opt of ts.options){if(parseInt(opt.value)===dur){ts.value=opt.value;found=true;break;}}
+    if(!found){
+      // Add a temporary option with the exact value
+      const opt=document.createElement('option');
+      opt.value=dur;opt.textContent=dur+'s (personalizado)';
+      ts.appendChild(opt);ts.value=dur;
+    }
+  },
+  setCurrentQ(idx){
+    state.currentQIndex=idx;
+    App.writeBin(state);
+    App.renderQList();App.renderStage();App.renderEditor();App.updateTimerUI();
+    App.syncTimerSelect();
+  },
+  async nextQ(){state.votingOpen=false;state.timerEnd=null;if(state.currentQIndex<state.questions.length-1)state.currentQIndex++;await App.writeBin(state);App.renderPresenter();App.syncTimerSelect();},
+  async prevQ(){state.votingOpen=false;state.timerEnd=null;if(state.currentQIndex>0)state.currentQIndex--;await App.writeBin(state);App.renderPresenter();App.syncTimerSelect();},
   async saveQText(idx,val){if(!val.trim())return;state.questions[idx].text=val;await App.writeBin(state);App.showToast('💾 Guardado');App.renderQList();App.renderStage();},
   async saveSubtext(idx,val){state.questions[idx].slideSubtext=val;await App.writeBin(state);App.showToast('💾 Guardado');},
   async saveOption(qi,oi,val){state.questions[qi].options[oi]=val;await App.writeBin(state);App.showToast('💾 Guardado');App.renderStage();},
@@ -426,8 +457,8 @@ const App={
     state.questions[idx].type=val;
     if((val==='mc'||val==='multi')&&!(state.questions[idx].options||[]).length)state.questions[idx].options=['Opción A','Opción B','Opción C'];
     if(val==='slider'){if(state.questions[idx].sliderMin===undefined)state.questions[idx].sliderMin=0;if(state.questions[idx].sliderMax===undefined)state.questions[idx].sliderMax=100;}
-    if(val==='slide'){const ts=document.getElementById('timer-select');if(ts)ts.value='10';}
-    App.writeBin(state);App.renderEditor();App.renderStage();
+    if(val==='slide'){if(!state.questions[idx].duration)state.questions[idx].duration=10;const ts=document.getElementById('timer-select');if(ts)ts.value='10';}
+    App.writeBin(state);App.renderEditor();App.renderStage();App.syncTimerSelect();
   },
   updateOption(qi,oi,val){state.questions[qi].options[oi]=val;},
   addOption(qi){state.questions[qi].options=[...(state.questions[qi].options||[]),'Nueva opción'];App.writeBin(state);App.renderEditor();},

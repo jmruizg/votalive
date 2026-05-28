@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cargar preguntas</title>
+<style>
+  body{background:#0a0a0f;color:#f0eff8;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:2rem;}
+  .box{background:#13131a;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:2rem;max-width:520px;width:100%;text-align:center;}
+  h2{font-size:1.2rem;margin-bottom:0.5rem;}
+  p{color:rgba(240,239,248,0.5);font-size:0.88rem;margin-bottom:1.5rem;line-height:1.5;}
+  .btn{background:#7c6ff7;color:#fff;border:none;border-radius:10px;padding:0.85rem 2rem;font-size:1rem;cursor:pointer;width:100%;margin-bottom:0.75rem;}
+  .btn:hover{background:#6a5ef0;}
+  .btn-danger{background:rgba(247,111,111,0.15);color:#f76f6f;border:1px solid rgba(247,111,111,0.3);}
+  .log{margin-top:1rem;font-size:0.82rem;color:rgba(240,239,248,0.4);max-height:200px;overflow-y:auto;text-align:left;background:rgba(255,255,255,0.03);border-radius:8px;padding:0.75rem;}
+  .ok{color:#6ff7c0;} .err{color:#f76f6f;}
+</style>
+</head>
+<body>
+<div class="box">
+  <h2>📋 Cargador de preguntas</h2>
+  <p>Carga las 10 preguntas del evento en JSONBin.<br>⚠️ Esto <strong>reemplazará</strong> las preguntas actuales y reseteará todos los votos.</p>
+  <button class="btn" onclick="cargar()">🚀 Cargar las 10 preguntas</button>
+  <div class="log" id="log">Listo para cargar...</div>
+</div>
+<script>
+const API_KEY='$2a$10$Ahrerr8sWWjfgEoeMhnqDOz0okM//gTvibkiczObCd6D43HwEaO3y';
+const BIN_ID='6a162f1b8ef04f45381f56a5';
+const BASE='https://api.jsonbin.io/v3';
+
+const PREGUNTAS=[
+  {
+    id:'q1',type:'mc',duration:45,
+    text:'¿En qué fase te encuentras ante la fiebre del "TodoIAismo" de tu Dirección?',
+    options:[
+      'Fase Rendición: Digo a todo que sí. Si piden IA para el garaje, se la pongo.',
+      'Fase Resistencia: Pido analizar el caso de uso y KPIs... y se me va la vida en reuniones.',
+      'Fase Equilibrio: Hemos pactado un criterio de decisión rápido para filtrar el humo.'
+    ],
+    votes:{}
+  },
+  {
+    id:'q2',type:'word',duration:60,
+    text:'Define el "Blockchain aplicado al periodismo" en una sola palabra.',
+    votes:{}
+  },
+  {
+    id:'q3',type:'mc',duration:45,
+    text:'¿Cuánto dura en la vida real un "Plan Estratégico a 5 años" antes de que cambie un algoritmo o tecnología?',
+    options:[
+      'Los 5 años enteros (Esta opción es ciencia ficción).',
+      'Un año, con mucha suerte y parches.',
+      'Seis meses (Lo que tarda en salir el nuevo modelo de ChatGPT).',
+      'Lo que tardo en salir de la sala de juntas donde se ha aprobado.'
+    ],
+    votes:{}
+  },
+  {
+    id:'q4',type:'multi',duration:45,
+    text:'¿Qué pesa más ahora mismo en la portada de tu medio en el móvil?',
+    options:[
+      'El código de las noticias y el periodismo.',
+      'Los 50 scripts de programática que nos obligó a meter comercial.',
+      'El script anti-adblocker para intentar salvar las pérdidas del punto anterior.'
+    ],
+    votes:{}
+  },
+  {
+    id:'q5',type:'word',duration:60,
+    text:'¿Cuál es la regla de ciberseguridad más sagrada que te has saltado un domingo por una urgencia crítica?',
+    votes:{}
+  },
+  {
+    id:'q6',type:'mc',duration:30,
+    text:'Sinceramente, ¿cuánto dura la reunión "ágil" obligatoria de 15 minutos en tu equipo?',
+    options:[
+      '15 minutos (Mentira corporativa para el informe).',
+      '45 minutos si el arquitecto de sistemas se toma el segundo café.',
+      'Una hora mínima y salimos con dolor de espalda.'
+    ],
+    votes:{}
+  },
+  {
+    id:'q7',type:'mc',duration:45,
+    text:'Si mañana tu equipo apagara AMP por completo... ¿qué pasaría con vuestro tráfico de Google Discover?',
+    options:[
+      'Nada, nuestra web móvil vuela y estamos preparados.',
+      'Caería un poco el primer día, pero sobreviviríamos.',
+      'Catástrofe absoluta. El Director General me pide el finiquito antes del almuerzo.',
+      'No lo sé y prefiero no tocar ese botón por si acaso.'
+    ],
+    votes:{}
+  },
+  {
+    id:'q8',type:'word',duration:60,
+    text:'¿Cuál es tu verdadera preocupación actual con el talento técnico en tu departamento?',
+    votes:{}
+  },
+  {
+    id:'q9',type:'slider',duration:30,
+    text:'Si mañana una tormenta solar borrara de la Tierra los servicios en la nube de EE.UU. (AWS, Google, Microsoft)... ¿Cuánto aguantaría tu medio vivo?',
+    sliderMin:0,
+    sliderMax:24,
+    votes:{}
+  },
+  {
+    id:'q10',type:'multi',duration:45,
+    text:'Sinceramente... con lo que sufrimos en el día a día, ¿por qué seguimos trabajando en el sector de los medios?',
+    options:[
+      'Por puro síndrome de Estocolmo mediático.',
+      'Porque la alternativa es irme a una consultora a rellenar pósits y paso.',
+      'Porque me queda ya muy poco para jubilarme.',
+      'Porque venir al encuentro de Huesca una vez al año compensa todo lo demás.'
+    ],
+    votes:{}
+  },
+  {
+    id:'q11',type:'word',duration:60,
+    text:'¿Qué tipo de licencias pagas todos los años sabiendo que no se usan o están infrautilizadas?',
+    votes:{}
+  },
+  {
+    id:'q12',type:'mc',duration:30,
+    text:'¿Cuál es el peor jefe posible que has tenido o se puede tener?',
+    options:[
+      'El que sabe y te puede pillar en un renuncio.',
+      'El que no tiene ni idea de nada, no se entera de explicaciones pero asiente.',
+      'El que cree que sabe (pero NO).'
+    ],
+    votes:{}
+  },
+  {
+    id:'q13',type:'slider',duration:30,
+    text:'¿Hay paridad en los equipos de IT? ¿Qué porcentaje de mujeres componen los equipos?',
+    sliderMin:0,
+    sliderMax:100,
+    votes:{}
+  },
+  {
+    id:'q14',type:'multi',duration:45,
+    text:'Te piden ahorro de costes y además te exigen...',
+    options:[
+      'El último iPhone el día que sale.',
+      'La webcam robotizada para las videoconferencias.',
+      'Que todos tengan licencias de ChatGPT Pro.',
+      'Un rediseño de la web porque estamos de aniversario.'
+    ],
+    votes:{}
+  }
+];
+
+function log(msg,cls=''){
+  const el=document.getElementById('log');
+  el.innerHTML+=`<div class="${cls}">${msg}</div>`;
+  el.scrollTop=el.scrollHeight;
+}
+
+async function cargar(){
+  document.getElementById('log').innerHTML='';
+  log('Leyendo estado actual...');
+  try{
+    const r=await fetch(`${BASE}/b/${BIN_ID}/latest`,{headers:{'X-Master-Key':API_KEY}});
+    if(!r.ok)throw new Error('Error leyendo JSONBin: '+r.status);
+    const data=await r.json();
+    const current=data.record||{};
+
+    // Keep meta fields, replace questions
+    const newState={
+      ...current,
+      currentQIndex:0,
+      votingOpen:false,
+      timerEnd:null,
+      timerDuration:30,
+      questions:PREGUNTAS
+    };
+
+    log('Guardando 10 preguntas...');
+    const w=await fetch(`${BASE}/b/${BIN_ID}`,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},
+      body:JSON.stringify(newState)
+    });
+    if(!w.ok)throw new Error('Error guardando: '+w.status);
+
+    log('✅ ¡Listo! Las 10 preguntas están cargadas.','ok');
+    log('Abre manageVota.html para verlas.','ok');
+  }catch(e){
+    log('❌ Error: '+e.message,'err');
+  }
+}
+</script>
+</body>
+</html>

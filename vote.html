@@ -93,8 +93,20 @@ async function writeBin(s){
 }
 
 async function init(){
-  try{state=await readBin();renderVoter();updateTimerUI();}
-  catch(e){document.getElementById('voter-card').innerHTML='<p style="color:var(--muted);text-align:center;padding:2rem">Error de conexión. Recarga la página.</p>';return;}
+  try{
+    state=await readBin();
+    if(!state||!state.questions){
+      document.getElementById('voter-card').innerHTML='<p style="color:var(--muted);text-align:center;padding:2rem">Esperando al presentador...</p>';
+      pollTimer=setInterval(async()=>{
+        try{const f=await readBin();if(f&&f.questions){state=f;clearInterval(pollTimer);init();}}catch(e){}
+      },3000);
+      return;
+    }
+    renderVoter();updateTimerUI();
+  }catch(e){
+    document.getElementById('voter-card').innerHTML=`<p style="color:var(--danger);text-align:center;padding:2rem">Error de conexión.<br><small style="opacity:0.6">${e.message||''}</small><br><br><button onclick="init()" style="background:var(--accent);color:#fff;border:none;padding:0.5rem 1.2rem;border-radius:8px;cursor:pointer">Reintentar</button></p>`;
+    return;
+  }
   pollTimer=setInterval(poll,2500);
   localTimer=setInterval(updateTimerUI,500);
 }

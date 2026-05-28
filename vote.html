@@ -239,6 +239,7 @@ async function submitSlider(qId){
   q.votes[getVoterId()]=val;await writeBin(state);
   voterHasVoted[qId]=true;showConfirm(document.getElementById('v-form'));
 }
+async function submitStar(qId){
   if(!_selStar)return;
   const q=state.questions.find(q=>q.id===qId);if(!q)return;
   q.votes[getVoterId()]=_selStar;await writeBin(state);

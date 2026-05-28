@@ -248,9 +248,7 @@ const App={
     const hasVotes=Object.keys(q?.votes||{}).length>0;
     if(bl)bl.style.display=open?'none':'flex';
     if(bc)bc.style.display=open?'flex':'none';
-    // Show next when: voting closed AND (has votes OR is a slide) AND not last question
-    if(bn)bn.style.display=(!open&&(hasVotes||isSlide)&&state.currentQIndex<state.questions.length-1)?'flex':'none';
-    // Show prev when: voting closed AND not first question
+    if(bn)bn.style.display=(!open&&state.currentQIndex<state.questions.length-1)?'flex':'none';
     if(bp)bp.style.display=(!open&&state.currentQIndex>0)?'flex':'none';
   },
 

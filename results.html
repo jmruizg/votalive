@@ -440,6 +440,7 @@ const Results={
       });
       return;
     }
+    if(q.type==='mc'||q.type==='multi'){
       const opts=q.options||[];
       const counts={};opts.forEach(o=>counts[o]=0);
       if(q.type==='mc'){

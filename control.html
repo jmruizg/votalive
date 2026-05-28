@@ -249,11 +249,11 @@ const Ctrl={
     document.getElementById('c-btn-launch').style.display=open?'none':'flex';
     document.getElementById('c-btn-close').style.display=open?'flex':'none';
 
-    // Nav
+    // Nav — prev/next always visible, disabled only when voting is open
     const bprev=document.getElementById('c-btn-prev');
     const bnext=document.getElementById('c-btn-next');
-    bprev.disabled=state.currentQIndex===0||open;
-    bnext.disabled=(state.currentQIndex>=state.questions.length-1)||open||(!hasVotes&&!isSlide);
+    bprev.disabled=open||state.currentQIndex===0;
+    bnext.disabled=open||state.currentQIndex>=state.questions.length-1;
   },
 
   async launch(){
